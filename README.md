@@ -10,7 +10,10 @@ Access the form generator at: **https://jakepro716.github.io/atf-5320-generator/
 
 - **Complete client-side processing** - Your data never leaves your browser
 - **Auto-save functionality** - Form state is saved in browser storage (sessionStorage by default, opt-in localStorage)
-- **PDF generation** - Creates properly formatted ATF Form 5320.23 PDFs
+- **PDF generation** - Creates properly formatted ATF Form 5320.23 PDFs with separate ATF/RP and CLEO copies packaged as a ZIP
+- **Signature pad** - Draw your signature with a guided baseline; rendered with transparent background onto the PDF
+- **Photo upload** - Attach a passport-style photo that gets embedded into the form
+- **Batch processing** - Import a CSV of multiple items to generate forms in bulk as a single ZIP
 - **Form validation** - Real-time validation with inline error messages
 - **Smart field interactions** - Auto-formatting for phone numbers, SSNs, and conditional field enabling
 
@@ -37,12 +40,15 @@ The project uses:
 - **TypeScript** with strict configuration
 - **Webpack** for bundling with WebAssembly support
 - **mupdf.js** for client-side PDF manipulation
+- **JSZip** for packaging ATF and CLEO PDF copies
+- **autopen** for signature stroke rendering
 ### Project Structure
 
-- `src/index.ts` - Main TypeScript application with PDF generation logic
-- `index.html` - Complete form implementation with embedded styles
-- `static/form.js` - Form state management, validation, and UI logic
-- `static/` - Contains the official ATF form PDF template and styles
+- `src/index.ts` - PDF generation, signature rendering, photo embedding, and batch processing
+- `index.html` - Form markup and Content Security Policy
+- `static/form.js` - Form state management, validation, signature pad UI, and serialization
+- `static/styles.css` - Application styles
+- `static/` - Also contains the official ATF form PDF template
 
 ## Privacy & Security
 
