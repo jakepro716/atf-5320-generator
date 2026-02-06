@@ -57,6 +57,10 @@ The project uses:
 - Restrictive Content Security Policy implemented
 - Open source under AGPL-3.0-or-later license
 
+## Acknowledgements
+
+This project is based on the original [atf-5320.23-generator](https://github.com/schlarpc/atf-5320.23-generator) by [schlarpc](https://github.com/schlarpc).
+
 ## License
 
 This project is licensed under the AGPL-3.0-or-later license. See the LICENSE file for details.
