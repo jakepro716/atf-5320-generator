@@ -4,30 +4,17 @@ A client-side web application for generating PDFs of ATF Form 5320.23 (National 
 
 ## 🔗 Live Application
 
-Access the form generator at: **https://schlarpc.github.io/atf-5320.23-generator/**
+Access the form generator at: **https://jakepro716.github.io/atf-5320-generator/**
 
 ## Features
 
 - **Complete client-side processing** - Your data never leaves your browser
-- **Auto-save functionality** - Form state is preserved in the URL for bookmarking
+- **Auto-save functionality** - Form state is saved in browser storage (sessionStorage by default, opt-in localStorage)
 - **PDF generation** - Creates properly formatted ATF Form 5320.23 PDFs
 - **Form validation** - Real-time validation with inline error messages
 - **Smart field interactions** - Auto-formatting for phone numbers, SSNs, and conditional field enabling
 
 ## Building
-
-### With Nix (Recommended)
-
-```bash
-# Build the project
-nix build
-
-# Development environment with direnv
-direnv allow  # enables automatic nix develop shell
-npm run dev   # starts development server on port 2000
-```
-
-### With Node.js/npm
 
 ```bash
 # Install dependencies
@@ -50,14 +37,12 @@ The project uses:
 - **TypeScript** with strict configuration
 - **Webpack** for bundling with WebAssembly support
 - **mupdf.js** for client-side PDF manipulation
-- **Nix** for reproducible builds and deployment
-
 ### Project Structure
 
 - `src/index.ts` - Main TypeScript application with PDF generation logic
 - `index.html` - Complete form implementation with embedded styles
-- `static/` - Contains the official ATF form PDF template
-- `flake.nix` - Nix build configuration for reproducible builds
+- `static/form.js` - Form state management, validation, and UI logic
+- `static/` - Contains the official ATF form PDF template and styles
 
 ## Privacy & Security
 
