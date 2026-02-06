@@ -558,21 +558,17 @@ async function renderSignatureImage(
     const canvas = new OffscreenCanvas(1200, 400);
     const ctx = canvas.getContext("2d")!;
 
-    // Fill white background (JPEG has no transparency)
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, 1200, 400);
-
-    // Draw SVG image
+    // No background fill — keep transparent so signature doesn't cover text
     ctx.drawImage(img, 0, 0, 1200, 400);
 
     URL.revokeObjectURL(svgUrl);
 
-    // Convert to JPEG
-    const jpegBlob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.92 });
-    const jpegBuffer = new Uint8Array(await jpegBlob.arrayBuffer());
-    console.log("[PDF] Signature JPEG size:", jpegBuffer.length, "bytes");
+    // Convert to PNG (supports transparency, unlike JPEG)
+    const pngBlob = await canvas.convertToBlob({ type: "image/png" });
+    const pngBuffer = new Uint8Array(await pngBlob.arrayBuffer());
+    console.log("[PDF] Signature PNG size:", pngBuffer.length, "bytes");
 
-    return new mupdf.Image(jpegBuffer);
+    return new mupdf.Image(pngBuffer);
   } catch (error) {
     console.error("Error rendering signature image:", error);
     return null;
@@ -621,10 +617,9 @@ function renderPagesToBuffer(
     if (signatureImage && pageIndex === signaturePageIndex && signatureRect) {
       try {
         // Signature image is 1200x400 (3:1 aspect ratio).
-        // Constrain to the widget rect height to avoid covering surrounding text,
-        // then compute width from aspect ratio.
+        // Fixed height of 25pt, compute width from 3:1 aspect ratio.
         const sigImageAspect = 1200 / 400; // 3:1
-        const sigHeight = signatureRect[3] - signatureRect[1];
+        const sigHeight = 25;
         const sigWidth = sigHeight * sigImageAspect;
         const sigX = signatureRect[0];
         const sigY = signatureRect[1];
