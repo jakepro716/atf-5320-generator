@@ -527,8 +527,12 @@ async function renderSignatureImage(
       sig.pushStroke(stroke);
     }
 
-    if (sig.isEmpty()) return null;
+    if (sig.isEmpty()) {
+      console.log("[PDF] Signature is empty after pushing strokes");
+      return null;
+    }
 
+    console.log("[PDF] Rendering signature SVG, stroke count:", sig.strokeCount);
     // Render to SVG
     const svgString = sig.render(Format.SVG, {
       width: 1200,
@@ -566,6 +570,7 @@ async function renderSignatureImage(
     // Convert to JPEG
     const jpegBlob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.92 });
     const jpegBuffer = new Uint8Array(await jpegBlob.arrayBuffer());
+    console.log("[PDF] Signature JPEG size:", jpegBuffer.length, "bytes");
 
     return new mupdf.Image(jpegBuffer);
   } catch (error) {
@@ -586,6 +591,8 @@ function renderPagesToBuffer(
   const outputBuffer = new mupdf.Buffer();
   const writer = new mupdf.DocumentWriter(outputBuffer, "pdf", "");
 
+  console.log("[PDF] renderPagesToBuffer: pages", pageIndices, "photoPage:", photoPageIndex, "sigPage:", signaturePageIndex, "hasPhoto:", !!photoImage, "hasSig:", !!signatureImage);
+
   for (const pageIndex of pageIndices) {
     const page = doc.loadPage(pageIndex);
     const bounds = page.getBounds();
@@ -603,6 +610,7 @@ function renderPagesToBuffer(
         const photoY = 300;
         const matrix: mupdf.Matrix = [photoWidth, 0, 0, photoHeight, photoX, photoY];
         device.fillImage(photoImage, matrix, 1.0);
+        console.log("[PDF] Drew photo on page", pageIndex);
       } catch (error) {
         console.error("Error drawing photo:", error);
       }
@@ -617,6 +625,7 @@ function renderPagesToBuffer(
         const sigY = 695;
         const matrix: mupdf.Matrix = [sigWidth, 0, 0, sigHeight, sigX, sigY];
         device.fillImage(signatureImage, matrix, 1.0);
+        console.log("[PDF] Drew signature on page", pageIndex);
       } catch (error) {
         console.error("Error drawing signature:", error);
       }
@@ -773,6 +782,7 @@ async function preparePdfDocument(
   const photoDataUrl = window.getPhotoData ? window.getPhotoData() : null;
   let photoImage: mupdf.Image | null = null;
 
+  console.log("[PDF] Photo data URL present:", !!photoDataUrl);
   if (photoDataUrl) {
     try {
       const base64Data = photoDataUrl.split(",")[1];
@@ -782,6 +792,7 @@ async function preparePdfDocument(
         bytes[i] = binaryString.charCodeAt(i);
       }
       photoImage = new mupdf.Image(bytes);
+      console.log("[PDF] Photo image created, bytes:", bytes.length);
     } catch (error) {
       console.error("Error loading photo:", error);
     }
@@ -791,10 +802,13 @@ async function preparePdfDocument(
   const signatureStrokes = window.getSignatureStrokes ? window.getSignatureStrokes() : null;
   let signatureImage: mupdf.Image | null = null;
 
+  console.log("[PDF] Signature strokes present:", !!signatureStrokes, "count:", signatureStrokes?.length ?? 0);
   if (signatureStrokes && signatureStrokes.length > 0) {
     signatureImage = await renderSignatureImage(signatureStrokes);
+    console.log("[PDF] Signature image created:", !!signatureImage);
   }
 
+  console.log("[PDF] Final state - photoImage:", !!photoImage, "signatureImage:", !!signatureImage);
   return { doc, photoImage, signatureImage };
 }
 
