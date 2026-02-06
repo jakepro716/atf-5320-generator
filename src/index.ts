@@ -586,12 +586,13 @@ function renderPagesToBuffer(
   photoImage: mupdf.Image | null,
   signatureImage: mupdf.Image | null,
   photoPageIndex: number,
-  signaturePageIndex: number
+  signaturePageIndex: number,
+  signatureRect: mupdf.Rect | null
 ): Uint8Array {
   const outputBuffer = new mupdf.Buffer();
   const writer = new mupdf.DocumentWriter(outputBuffer, "pdf", "");
 
-  console.log("[PDF] renderPagesToBuffer: pages", pageIndices, "photoPage:", photoPageIndex, "sigPage:", signaturePageIndex, "hasPhoto:", !!photoImage, "hasSig:", !!signatureImage);
+  console.log("[PDF] renderPagesToBuffer: pages", pageIndices, "photoPage:", photoPageIndex, "sigPage:", signaturePageIndex, "hasPhoto:", !!photoImage, "hasSig:", !!signatureImage, "sigRect:", signatureRect);
 
   for (const pageIndex of pageIndices) {
     const page = doc.loadPage(pageIndex);
@@ -616,16 +617,16 @@ function renderPagesToBuffer(
       }
     }
 
-    // Draw signature on the second page of each copy
-    if (signatureImage && pageIndex === signaturePageIndex) {
+    // Draw signature on the second page of each copy using captured widget rect
+    if (signatureImage && pageIndex === signaturePageIndex && signatureRect) {
       try {
-        const sigWidth = 100;
-        const sigHeight = 19;
-        const sigX = 36;
-        const sigY = 695;
+        const sigX = signatureRect[0];
+        const sigY = signatureRect[1];
+        const sigWidth = signatureRect[2] - signatureRect[0];
+        const sigHeight = signatureRect[3] - signatureRect[1];
         const matrix: mupdf.Matrix = [sigWidth, 0, 0, sigHeight, sigX, sigY];
         device.fillImage(signatureImage, matrix, 1.0);
-        console.log("[PDF] Drew signature on page", pageIndex);
+        console.log("[PDF] Drew signature on page", pageIndex, "at rect:", signatureRect);
       } catch (error) {
         console.error("Error drawing signature:", error);
       }
@@ -657,6 +658,7 @@ async function preparePdfDocument(
   doc: mupdf.PDFDocument;
   photoImage: mupdf.Image | null;
   signatureImage: mupdf.Image | null;
+  signatureRects: Map<number, mupdf.Rect>;
 }> {
   const response = await fetch(
     "./static/f_5320.23_national_firearms_act_nfa_responsible_person_questionnaire.pdf"
@@ -682,6 +684,9 @@ async function preparePdfDocument(
   const pageCount = doc.countPages();
   const signatureWidgetsToRemove: Array<{ page: mupdf.PDFPage; widget: mupdf.PDFWidget }> = [];
 
+  // Map from page index to signature widget rect (captured before deletion)
+  const signatureRects = new Map<number, mupdf.Rect>();
+
   for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
     const page = doc.loadPage(pageIndex) as mupdf.PDFPage;
     const pageWidgets = page.getWidgets();
@@ -697,6 +702,10 @@ async function preparePdfDocument(
         fieldName.toLowerCase().includes("_sig");
 
       if (isSignatureField) {
+        // Capture the rect before we delete the widget
+        const rect = widget.getRect();
+        console.log(`[PDF] Signature widget on page ${pageIndex}: ${fieldName} rect=[${rect}]`);
+        signatureRects.set(pageIndex, rect);
         signatureWidgetsToRemove.push({ page, widget });
       } else if (fieldName) {
         widgets.set(fieldName, widget);
@@ -782,16 +791,24 @@ async function preparePdfDocument(
   const photoDataUrl = window.getPhotoData ? window.getPhotoData() : null;
   let photoImage: mupdf.Image | null = null;
 
+  console.log("[PDF] Photo data URL present:", !!photoDataUrl);
   if (photoDataUrl) {
     try {
-      // Convert data URL to Blob
-      const photoResponse = await fetch(photoDataUrl);
-      const photoBlob = await photoResponse.blob();
+      // Convert data URL to Blob without fetch (avoids CSP connect-src restrictions)
+      const base64Data = photoDataUrl.split(",")[1];
+      const mimeMatch = photoDataUrl.match(/^data:([^;]+);/);
+      const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
+      const binaryString = atob(base64Data);
+      const rawBytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        rawBytes[i] = binaryString.charCodeAt(i);
+      }
+      const photoBlob = new Blob([rawBytes], { type: mimeType });
 
-      // Use createImageBitmap (works with any format, not subject to CSP img-src)
+      // Use createImageBitmap (works with any format including WebP, not subject to CSP)
       const bitmap = await createImageBitmap(photoBlob);
 
-      // Draw onto OffscreenCanvas and export as JPEG
+      // Draw onto OffscreenCanvas and export as JPEG for mupdf compatibility
       const photoCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
       const photoCtx = photoCanvas.getContext("2d")!;
       photoCtx.fillStyle = "#FFFFFF";
@@ -803,6 +820,7 @@ async function preparePdfDocument(
       const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
 
       photoImage = new mupdf.Image(jpegBytes);
+      console.log("[PDF] Photo converted to JPEG, size:", jpegBytes.length);
     } catch (error) {
       console.error("Error loading photo:", error);
     }
@@ -818,8 +836,8 @@ async function preparePdfDocument(
     console.log("[PDF] Signature image created:", !!signatureImage);
   }
 
-  console.log("[PDF] Final state - photoImage:", !!photoImage, "signatureImage:", !!signatureImage);
-  return { doc, photoImage, signatureImage };
+  console.log("[PDF] Final state - photoImage:", !!photoImage, "signatureImage:", !!signatureImage, "signatureRects:", signatureRects.size);
+  return { doc, photoImage, signatureImage, signatureRects };
 }
 
 // Main PDF generation function
@@ -830,14 +848,20 @@ async function generatePDF(): Promise<void> {
     const fieldsToFill = mapFormDataToPdfFields(formData);
 
     console.log("Loading and filling PDF...");
-    const { doc, photoImage, signatureImage } = await preparePdfDocument(fieldsToFill);
+    const { doc, photoImage, signatureImage, signatureRects } = await preparePdfDocument(fieldsToFill);
 
     // After page deletion, 4 remaining pages:
     // Pages 0-1 = ATF/RP copy, Pages 2-3 = CLEO copy
+    // Signature rects were captured at original page indices (1 for RP, 5 for CLEO)
+    // After deleting pages 2-3: original page 1 → post-deletion page 1, original page 5 → post-deletion page 3
+    const rpSigRect = signatureRects.get(1) || null;
+    const cleoSigRect = signatureRects.get(5) || null;
+    console.log("[PDF] RP signature rect:", rpSigRect, "CLEO signature rect:", cleoSigRect);
+
     const baseFilename = generateBaseFilename(formData);
 
-    const atfBuffer = renderPagesToBuffer(doc, [0, 1], photoImage, signatureImage, 0, 1);
-    const cleoBuffer = renderPagesToBuffer(doc, [2, 3], photoImage, signatureImage, 2, 3);
+    const atfBuffer = renderPagesToBuffer(doc, [0, 1], photoImage, signatureImage, 0, 1, rpSigRect);
+    const cleoBuffer = renderPagesToBuffer(doc, [2, 3], photoImage, signatureImage, 2, 3, cleoSigRect);
 
     doc.destroy();
 
@@ -975,12 +999,14 @@ async function generatePDFBuffers(
 
   const fieldsToFill = mapFormDataToPdfFields(effectiveFormData);
 
-  const { doc, photoImage, signatureImage } = await preparePdfDocument(fieldsToFill);
+  const { doc, photoImage, signatureImage, signatureRects } = await preparePdfDocument(fieldsToFill);
 
   // After page deletion, 4 remaining pages:
   // Pages 0-1 = ATF/RP copy, Pages 2-3 = CLEO copy
-  const atfBuffer = renderPagesToBuffer(doc, [0, 1], photoImage, signatureImage, 0, 1);
-  const cleoBuffer = renderPagesToBuffer(doc, [2, 3], photoImage, signatureImage, 2, 3);
+  const rpSigRect = signatureRects.get(1) || null;
+  const cleoSigRect = signatureRects.get(5) || null;
+  const atfBuffer = renderPagesToBuffer(doc, [0, 1], photoImage, signatureImage, 0, 1, rpSigRect);
+  const cleoBuffer = renderPagesToBuffer(doc, [2, 3], photoImage, signatureImage, 2, 3, cleoSigRect);
 
   const baseFilename = generateBaseFilename(effectiveFormData);
 
