@@ -881,6 +881,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     _clearRenderCanvas() {
       this.renderCtx.clearRect(0, 0, this.renderCanvas.width, this.renderCanvas.height);
+      this._drawBaseline();
+    }
+
+    _drawBaseline() {
+      const ctx = this.renderCtx;
+      const y = this.renderCanvas.height * 0.7;
+      ctx.save();
+      ctx.strokeStyle = "#bbb";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(10, y);
+      ctx.lineTo(this.renderCanvas.width - 10, y);
+      ctx.stroke();
+      ctx.restore();
     }
 
     _catmullRomPoint(p0, p1, p2, p3, t) {
@@ -943,7 +958,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     _renderAllStrokes() {
-      this._clearRenderCanvas();
+      this._clearRenderCanvas(); // also draws baseline
       for (const stroke of this.strokes) {
         this._drawSplineStroke(this.renderCtx, stroke);
       }
