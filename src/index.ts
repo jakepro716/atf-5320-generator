@@ -621,15 +621,13 @@ function renderPagesToBuffer(
     if (signatureImage && pageIndex === signaturePageIndex && signatureRect) {
       try {
         // Signature image is 1200x400 (3:1 aspect ratio).
-        // The widget rect is a thin line field — use its width but compute
-        // height from the image aspect ratio to avoid distortion.
+        // Constrain to the widget rect height to avoid covering surrounding text,
+        // then compute width from aspect ratio.
         const sigImageAspect = 1200 / 400; // 3:1
-        const rectWidth = signatureRect[2] - signatureRect[0];
-        const sigWidth = rectWidth;
-        const sigHeight = sigWidth / sigImageAspect;
-        // Bottom-align: signature sits on the widget's bottom edge (the line)
+        const sigHeight = signatureRect[3] - signatureRect[1];
+        const sigWidth = sigHeight * sigImageAspect;
         const sigX = signatureRect[0];
-        const sigY = signatureRect[3] - sigHeight;
+        const sigY = signatureRect[1];
         const matrix: mupdf.Matrix = [sigWidth, 0, 0, sigHeight, sigX, sigY];
         device.fillImage(signatureImage, matrix, 1.0);
         console.log("[PDF] Drew signature on page", pageIndex, "rect:", [sigX, sigY, sigWidth, sigHeight]);
