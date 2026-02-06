@@ -822,6 +822,7 @@ document.addEventListener("DOMContentLoaded", () => {
       this.isDrawing = false;
 
       this._bindEvents();
+      this._drawBaseline();
     }
 
     _getPointerPosition(e) {
