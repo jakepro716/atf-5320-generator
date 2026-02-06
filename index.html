@@ -1,0 +1,1281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'wasm-unsafe-eval' 'self'; connect-src 'self'; style-src 'unsafe-inline' 'self'; form-action 'none';"
+    />
+    <title>NFA Responsible Person Questionnaire (5320.23)</title>
+    <link rel="stylesheet" href="./static/styles.css" />
+  </head>
+  <body>
+    <h1>National Firearms Act (NFA) Responsible Person Questionnaire (5320.23)</h1>
+    <a
+      href="https://github.com/schlarpc/atf-5320.23-generator"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="github-badge"
+      title="View source code on GitHub"
+    >
+      <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+        <path
+          d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+        />
+      </svg>
+      Open Source
+    </a>
+    <p class="bookmark-note">
+      <strong>Save Your Progress:</strong> Your form data is saved directly in the page URL. You can
+      bookmark this page at any time to save a partially completed form, or to create a template
+      with your default information for future use.
+    </p>
+
+    <div class="form-actions">
+      <button type="button" id="clear-form" class="form-button secondary">Clear All Answers</button>
+    </div>
+
+    <template id="blurb-prohibited-person">
+      Generally, 18 U.S.C. § 922(g) prohibits the shipment, transportation, receipt, or possession
+      in or affecting interstate commerce of a firearm by one who: has been convicted of a felony or
+      any other crime, punishable by imprisonment for a term exceeding one year (this does not
+      include State misdemeanors punishable by imprisonment of two years or less), is a fugitive
+      from justice, is an unlawful user of or addicted to marijuana or any depressant, stimulant, or
+      narcotic drug, or any other controlled substance, has been adjudicated as a mental defective
+      or has been committed to a mental institution, has been discharged from the Armed Forces under
+      dishonorable conditions, has renounced his or her U.S. citizenship, is an alien illegally in
+      the United States or an alien admitted to the United States under a nonimmigrant visa, and/or
+      is subject to certain restraining orders. Furthermore, Section 922(n) prohibits the shipment,
+      transportation, or receipt in or affecting interstate commerce of a firearm by one who is
+      under indictment or information for a felony in any Federal, State or local court, or any
+      other crime, punishable by imprisonment for a term exceeding one year. An information is a
+      formal accusation of a crime verified by a prosecutor. EXCEPTION: A person who has been
+      convicted of a felony or any other crime, for which the judge could have imprisoned the person
+      for more than one year, or who has been convicted of a misdemeanor crime of domestic violence,
+      is not prohibited from purchasing, receiving, or possessing a firearm if: (1) under the law of
+      the jurisdiction where the conviction occurred the person has been pardoned, the conviction
+      has been expunged or set aside, or the person had their civil rights (the right to vote, sit
+      on a jury, and hold public office) taken away and later restored; and (2) the person is not
+      prohibited by the law of the jursidiction where the conviction occurred from receiving or
+      possessing firearms. Person subject to this exception should mark “no” in the applicable box.
+    </template>
+
+    <form id="nfa-form" novalidate>
+      <!-- Question 1 -->
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>1. ATF Form Being Submitted</span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <div class="radio-group">
+          <div>
+            <input type="radio" id="q1-form1" name="q1_formType" value="ATF FORM 1" /><label
+              for="q1-form1"
+              >ATF FORM 1</label
+            >
+          </div>
+          <div>
+            <input type="radio" id="q1-form4" name="q1_formType" value="ATF FORM 4" /><label
+              for="q1-form4"
+              >ATF FORM 4</label
+            >
+          </div>
+          <div>
+            <input type="radio" id="q1-form5" name="q1_formType" value="ATF FORM 5" /><label
+              for="q1-form5"
+              >ATF FORM 5</label
+            >
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Question 2 -->
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>
+            2. Applicant or
+            <span class="blurb-trigger"
+              >Transferee<span class="blurb-content">The person acquiring the firearm.</span></span
+            >
+            <span class="parenthetical blurb-trigger"
+              >(as shown on the ATF Form 1, 4 or 5)
+              <span class="blurb-content"
+                >Enter the name, trade name (if any) and address of the trust or legal entity
+                identified on the Form 1 (Items 3a and b); Form 4 (Item 2a); or Form 5 (Item
+                2a)</span
+              >
+            </span>
+          </span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <label for="q2_fullName">Full Legal Name</label>
+        <input type="text" id="q2_fullName" name="q2_fullName" />
+        <label for="q2_address">Address</label>
+        <textarea id="q2_address" name="q2_address"></textarea>
+      </fieldset>
+
+      <!-- Question 3 -->
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span
+            >3.a.
+            <span class="blurb-trigger"
+              >Responsible Person<span class="blurb-content"
+                >In the case of a legal entity, including any trust, partnership, association,
+                company (to include any Limited Liability Company (LLC)), corporation, or Licensed
+                Entity that does not pay the Special (Occupational) Tax, any individual who
+                possesses, directly or indirectly, the power or authority to direct the management
+                and policies of the trust or entity to receive, possess, ship, transport, deliver,
+                transfer or otherwise dispose of a firearm for, or on behalf of, the trust or legal
+                entity.</span
+              ></span
+            ></span
+          >
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <label for="q3a_fullName">Full Legal Name</label>
+        <input type="text" id="q3a_fullName" name="q3a_fullName" />
+        <div class="inline-label-group">
+          <label for="q3a_homeAddress">Home Address</label>
+          <div class="checkbox-group">
+            <div>
+              <input type="checkbox" id="q3a_sameAs2" name="q3a_sameAs2" checked /><label
+                for="q3a_sameAs2"
+                >SAME AS 2</label
+              >
+            </div>
+          </div>
+        </div>
+        <textarea id="q3a_homeAddress" name="q3a_homeAddress"></textarea>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>3.b. Telephone <span class="parenthetical">(Area code and number)</span></span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <input type="tel" id="q3b_telephone" name="q3b_telephone" placeholder="(XXX) XXX-XXXX" />
+        <div class="validation-message" id="q3b_telephone-error"></div>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>3.c. E-mail address</span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <input type="text" id="q3c_email" name="q3c_email" />
+        <div class="validation-message" id="q3c_email-error"></div>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span
+            >3.d. Other Names Used
+            <span class="parenthetical">(Including alias and maiden name)</span></span
+          >
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <textarea id="q3d_otherNames" name="q3d_otherNames"></textarea>
+      </fieldset>
+
+      <fieldset class="question-group" id="photo-section">
+        <legend class="question-header">
+          <span>
+            3.e.
+            <span class="blurb-trigger">
+              Photograph
+              <span class="blurb-content">
+                Upload a recent passport-style photograph (2"x2"). The photo should be a clear,
+                front-facing headshot with a plain background. The image will be placed in the
+                photograph area of the form.
+              </span>
+            </span>
+            <span class="parenthetical">(2"x2" passport-style photo)</span>
+          </span>
+          <button type="button" class="clear-question-group" id="clear-photo" title="Clear photo">
+            &times;
+          </button>
+        </legend>
+
+        <div class="photo-upload-container">
+          <div class="photo-preview-area">
+            <img id="photo-preview" alt="Photo preview" style="display: none" />
+            <div id="photo-placeholder">
+              <span>No photo uploaded</span>
+              <span class="photo-dimensions">2" × 2"</span>
+            </div>
+          </div>
+          <div class="photo-controls">
+            <label for="photo-upload" class="form-button secondary">CHOOSE PHOTO</label>
+            <input type="file" id="photo-upload" accept="image/*" style="display: none" />
+            <p class="photo-hint">Accepts JPG, PNG, or other image formats</p>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>
+            3.f.
+            <span class="blurb-trigger"
+              >Social Security Number or Unique Personal Identification Number
+              <span class="blurb-content"
+                >The SSN and UPIN are not required. However, this information assists with the
+                efficient completion of the National Instant Criminal Background Check System (NICS)
+                background check. Please be aware that refusal to provide this information may
+                result in a delay in the NICS background check process.</span
+              >
+            </span>
+          </span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <input type="text" id="q3f_ssn" name="q3f_ssn" maxlength="11" placeholder="XXX-XX-XXXX" />
+        <div class="validation-message" id="q3f_ssn-error"></div>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>3.g. Date of Birth</span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <input type="date" id="q3g_dob" name="q3g_dob" />
+        <div class="validation-message" id="q3g_dob-error"></div>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>3.h. Ethnicity</span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <div class="radio-group">
+          <div>
+            <input
+              type="radio"
+              id="q3h_hispanic"
+              name="q3h_ethnicity"
+              value="HISPANIC OR LATINO"
+            /><label for="q3h_hispanic">HISPANIC OR LATINO</label>
+          </div>
+          <div>
+            <input
+              type="radio"
+              id="q3h_notHispanic"
+              name="q3h_ethnicity"
+              value="NOT HISPANIC OR LATINO"
+            /><label for="q3h_notHispanic">NOT HISPANIC OR LATINO</label>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>3.i. Race</span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <div class="radio-group">
+          <div>
+            <input
+              type="radio"
+              id="q3i_indian"
+              name="q3i_race"
+              value="AMERICAN INDIAN OR ALASKA NATIVE"
+            /><label for="q3i_indian">AMERICAN INDIAN OR ALASKA NATIVE</label>
+          </div>
+          <div>
+            <input
+              type="radio"
+              id="q3i_hawaiian"
+              name="q3i_race"
+              value="NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER"
+            /><label for="q3i_hawaiian">NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER</label>
+          </div>
+          <div>
+            <input type="radio" id="q3i_asian" name="q3i_race" value="ASIAN" /><label
+              for="q3i_asian"
+              >ASIAN</label
+            >
+          </div>
+          <div>
+            <input
+              type="radio"
+              id="q3i_black"
+              name="q3i_race"
+              value="BLACK OR AFRICAN AMERICAN"
+            /><label for="q3i_black">BLACK OR AFRICAN AMERICAN</label>
+          </div>
+          <div>
+            <input type="radio" id="q3i_white" name="q3i_race" value="WHITE" /><label
+              for="q3i_white"
+              >WHITE</label
+            >
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Question 4 -->
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>
+            4.a.
+            <span class="blurb-trigger"
+              >Type of Firearm<span class="blurb-content"
+                >(1) a shotgun having a barrel or barrels of less than 18 inches in length; (2) a
+                weapon made from a shotgun if such weapon as modified has an overall length of less
+                than 26 inches or a barrel or barrels of less than 18 inches in length; (3) a rifle
+                having a barrel or barrels of less than 16 inches in length; (4) a weapon made from
+                a rifle if such weapon as modified has an overall length of less than 26 inches or a
+                barrel or barrels of less than 16 inches in length; (5) any other weapon (entire
+                citation) in 26 United States Code (U.S.C.) section § 5845(e); (6) a machinegun; (7)
+                any silencer (as defined in 18 U.S.C. § 921), and (8) a destructive device).</span
+              ></span
+            >
+            <span class="parenthetical">(As identified in Item 4b of Form 1, 4, or 5)</span>
+          </span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <div class="radio-group">
+          <div>
+            <input
+              type="radio"
+              name="q4a_firearmType"
+              id="q4a_aow"
+              value="ANY OTHER WEAPON"
+            /><label for="q4a_aow">ANY OTHER WEAPON</label>
+          </div>
+          <div>
+            <input
+              type="radio"
+              name="q4a_firearmType"
+              id="q4a_dd"
+              value="DESTRUCTIVE DEVICE"
+            /><label for="q4a_dd">DESTRUCTIVE DEVICE</label>
+          </div>
+          <div>
+            <input type="radio" name="q4a_firearmType" id="q4a_mg" value="MACHINEGUN" /><label
+              for="q4a_mg"
+              >MACHINEGUN</label
+            >
+          </div>
+          <div>
+            <input
+              type="radio"
+              name="q4a_firearmType"
+              id="q4a_sbr"
+              value="SHORT BARRELED RIFLE"
+            /><label for="q4a_sbr">SHORT BARRELED RIFLE</label>
+          </div>
+          <div>
+            <input
+              type="radio"
+              name="q4a_firearmType"
+              id="q4a_sbs"
+              value="SHORT BARRELED SHOTGUN"
+            /><label for="q4a_sbs">SHORT BARRELED SHOTGUN</label>
+          </div>
+          <div>
+            <input type="radio" name="q4a_firearmType" id="q4a_sil" value="SILENCER" /><label
+              for="q4a_sil"
+              >SILENCER</label
+            >
+          </div>
+          <div>
+            <input type="radio" name="q4a_firearmType" id="q4a_other" value="OTHER" />
+            <label for="q4a_other_text" class="visually-hidden">OTHER FIREARM TYPE</label>
+            <input
+              type="text"
+              id="q4a_other_text"
+              name="q4a_firearmType_other"
+              placeholder="SPECIFY OTHER..."
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>
+            4.b.
+            <span class="blurb-trigger"
+              >Maker<span class="blurb-content"
+                >The person (applicant) applying to make and register the firearm.</span
+              ></span
+            >, Manufacturer and/or Importer of Firearm
+            <span class="parenthetical">(As identified in Item 4a of Form 1, 4 or 5)</span>
+          </span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <label for="q4b_name">Name</label>
+        <input type="text" id="q4b_name" name="q4b_name" />
+        <label for="q4b_address">Address</label>
+        <textarea id="q4b_address" name="q4b_address"></textarea>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span
+            >4.c. Firearm Model
+            <span class="parenthetical">(As identified in Item 4d of Form 1, 4 or 5)</span></span
+          >
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <input type="text" id="q4c_model" name="q4c_model" />
+        <div class="validation-message" id="q4c_model-error"></div>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span
+            >4.d. Caliber or Gauge
+            <span class="parenthetical">(As Identified in Item 4c of Form 1, 4 or 5)</span></span
+          >
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <input type="text" id="q4d_caliber" name="q4d_caliber" />
+        <div class="validation-message" id="q4d_caliber-error"></div>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span
+            >4.e. Firearm Serial Number
+            <span class="parenthetical">(As identified in Item 4g of Form 1, 4 or 5)</span></span
+          >
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <input type="text" id="q4e_serial" name="q4e_serial" />
+        <div class="validation-message" id="q4e_serial-error"></div>
+      </fieldset>
+
+      <!-- Batch Items CSV Upload -->
+      <fieldset class="question-group" id="batch-items-section">
+        <legend class="question-header">
+          <span>
+            <span class="blurb-trigger">
+              Batch Items (CSV Upload)
+              <span class="blurb-content">
+                Upload a CSV file to generate multiple 5320.23 forms at once. Each row creates a
+                separate PDF with the same responsible person information but different firearm
+                details. The CSV must have these columns: type, maker_name, maker_address, model,
+                caliber, serial. Valid firearm types are: ANY OTHER WEAPON, DESTRUCTIVE DEVICE,
+                MACHINEGUN, SHORT BARRELED RIFLE, SHORT BARRELED SHOTGUN, SILENCER.
+              </span>
+            </span>
+            <span class="parenthetical">(Optional - for generating multiple forms)</span>
+          </span>
+          <button type="button" class="clear-question-group" id="clear-csv" title="Clear CSV data">
+            &times;
+          </button>
+        </legend>
+
+        <div class="csv-upload-container">
+          <label for="csv-file">Upload CSV File</label>
+          <input type="file" id="csv-file" accept=".csv,text/csv" />
+
+          <div class="csv-divider">
+            <span>OR</span>
+          </div>
+
+          <label for="csv-text">Paste CSV Data</label>
+          <textarea
+            id="csv-text"
+            placeholder="type,maker_name,maker_address,model,caliber,serial
+SILENCER,SilencerCo,&quot;123 Main St, City, ST 12345&quot;,Omega 36M,7.62MM,ABC123456
+SHORT BARRELED RIFLE,Daniel Defense,&quot;101 Warfighter Way, Black Creek, GA 31308&quot;,DDM4 PDW,5.56MM,DD12345678"
+            rows="5"
+          ></textarea>
+
+          <button type="button" id="parse-csv" class="form-button secondary">
+            Parse CSV
+          </button>
+        </div>
+
+        <div id="csv-validation-message" class="validation-message"></div>
+
+        <div id="csv-preview" class="csv-preview" style="display: none">
+          <h3>Parsed Items (<span id="item-count">0</span>)</h3>
+          <div class="csv-table-container">
+            <table id="csv-preview-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Type</th>
+                  <th>Maker</th>
+                  <th>Model</th>
+                  <th>Caliber</th>
+                  <th>Serial</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Question 5 -->
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>
+            5.
+            <span class="blurb-trigger"
+              >Law Enforcement Notification<span class="blurb-content"
+                >Each responsible person must provide a notification on this form about the proposed
+                making or acquisition of an NFA firearm to his/her Chief Law Enforcement Officer
+                having jurisdiction where the responsible person is located. The Chief Law
+                Enforcement Officer is considered to be the Chief of Police; the Sheriff; the Head
+                of the State Police; or a State or local district attorney or prosecutor.</span
+              ></span
+            >
+          </span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <label for="q5_agencyName">Agency name</label>
+        <input type="text" id="q5_agencyName" name="q5_agencyName" />
+        <label for="q5_officialName">Name of official</label>
+        <input type="text" id="q5_officialName" name="q5_officialName" />
+        <label for="q5_officialTitle">Title of official</label>
+        <input type="text" id="q5_officialTitle" name="q5_officialTitle" />
+        <label for="q5_address"
+          >Full mailing address (Street address or P.O. box, city, State and ZIP code)</label
+        >
+        <textarea id="q5_address" name="q5_address"></textarea>
+      </fieldset>
+
+      <!-- Question 6 -->
+      <fieldset class="question-group" id="q6_prohibitors">
+        <legend class="question-header">
+          <span
+            >6.
+            <span class="blurb-trigger"
+              >Prohibiting Questions<span class="blurb-content-container"></span></span
+          ></span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <button
+          type="button"
+          id="q6_allNo"
+          class="form-button secondary"
+          style="margin-bottom: 2rem"
+        >
+          ANSWER ALL "NO"
+        </button>
+
+        <!-- 6.a -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.a. Do you intend to make any firearm listed on this form for sale for other
+            disposition to any person described in questions 6.b through 6.l, or a person described
+            in question 6.m who does not fall under an exception?
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6a-yes" name="q6a_intent" value="YES" /><label
+                  for="q6a-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6a-no" name="q6a_intent" value="NO" /><label for="q6a-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.b -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.b. Do you intend to sell or otherwise dispose of any firearm listed on this form in
+            furtherance of any felony or other offense punishable by imprisonment for a term of more
+            than one year?
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6b-yes" name="q6b_sell" value="YES" /><label for="q6b-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6b-no" name="q6b_sell" value="NO" /><label for="q6b-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.c -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.c. Are you under indictment or information in any court for a felony, or any other
+            crime, for which the judge could imprison you for more than one year?
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6c-yes" name="q6c_indictment" value="YES" /><label
+                  for="q6c-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6c-no" name="q6c_indictment" value="NO" /><label
+                  for="q6c-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.d -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.d. Have you ever been convicted in any court for a felony, or any other crime, for
+            which the judge could have imprisoned you for more than one year, even if you received a
+            shorter sentence including probation?
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6d-yes" name="q6d_convicted" value="YES" /><label
+                  for="q6d-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6d-no" name="q6d_convicted" value="NO" /><label
+                  for="q6d-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.e -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.e.
+            <span class="blurb-trigger"
+              >Are you a fugitive from justice?<span class="blurb-content"
+                >Any person who has fled from any State to avoid prosecution for a felony or a
+                misdemeanor, or any person who leaves the State to avoid giving testimony in any
+                criminal proceeding. The term also includes any person who knows that misdemeanor or
+                felony charges are pending against them and who leaves the State of
+                prosecution.</span
+              ></span
+            >
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6e-yes" name="q6e_fugitive" value="YES" /><label
+                  for="q6e-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6e-no" name="q6e_fugitive" value="NO" /><label for="q6e-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.f -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.f.
+            <span class="blurb-trigger"
+              >Are you an unlawful user of, or addicted to, marijuana or any depressant, stimulant,
+              narcotic drug, or any other controlled substance?<span class="blurb-content"
+                >Warning: The use or possession of marijuana remains unlawful under Federal law
+                regardless of whether it has been legalized or decriminalized for medicinal or
+                recreational purposes in the state where you reside.</span
+              ></span
+            >
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6f-yes" name="q6f_user" value="YES" /><label for="q6f-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6f-no" name="q6f_user" value="NO" /><label for="q6f-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.g -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.g.
+            <span class="blurb-trigger"
+              >Have you ever been adjudicated as a mental defective<span class="blurb-content"
+                >A determination by a court, board, commission, or other lawful authority that a
+                person, as a result of marked subnormal intelligence, or mental illness,
+                incompetency, condition, or disease: (1) is a danger to himself or to others; or (2)
+                lacks the mental capacity to contract or manage his own affairs. This term shall
+                include (1) a finding of insanity by a court in a criminal case, and (2) those
+                persons found incompetent to stand trial or found not guilty by reason of lack of
+                mental responsibility.</span
+              ></span
+            >
+            OR
+            <span class="blurb-trigger"
+              >have you ever been committed to a mental institution<span class="blurb-content"
+                >A formal commitment of a person to a mental institution by a court, board,
+                commission, or other lawful authority. The term includes a commitment to a mental
+                institution involuntarily. The term includes commitment for mental defectiveness or
+                mental illness. It includes commitments for other reasons, such as for drug use. The
+                term does not include a person in a mental institution for observation or a
+                voluntary admission to a mental institution. EXCEPTION: NICS Improvement Amendments
+                Act of 2007: A person who has been adjudicated as a mental defective or committed to
+                a mental institution in a state proceeding is not prohibited by the adjudication or
+                commitment if the person has been granted relief by the adjudicating /committing
+                state pursuant to a qualifying mental health relief from disabilities program. Also,
+                a person who has been adjudicated as a mental defective or committed to a mental
+                institution by a department or agency of the Federal Government is not prohibited by
+                the adjudication or commitment if either: (a) the person’s adjudication or commit
+                ment was set-aside or expunged by the adjudicating/committing agency; (b) the person
+                has been fully released or discharged from all mandatory treatment, supervision, or
+                monitoring by the agency; (c) the person was found by the agency to no longer suffer
+                from the mental health condition that served as the basis of the initial
+                adjudication/commitment; or (d) the adjudication or commitment, respectively, is
+                based solely on a medical finding of disability, without an opportunity for a
+                hearing by a court, board, commission, or other lawful authority, and the person has
+                not been adjudicated as a mental defective consistent with section 922(g)(4) of
+                Title 18, United States Code; or (e) the person was granted relief from the
+                adjudicating/committing agency pursuant to a qualified mental health relief from
+                disabilities program. Persons who fall within one of the above exceptions should
+                mark “no” in the applicable box. This exception to an adjudication or commitment by
+                a Federal department or agency does not apply to any person who was adjudicated to
+                be not guilty by reason of insanity, or based on a lack of mental responsibility, or
+                found incompetent to stand trial, in any criminal case or under the Uniform Code of
+                Military Justice.</span
+              ></span
+            >?
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6g-yes" name="q6g_mental" value="YES" /><label
+                  for="q6g-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6g-no" name="q6g_mental" value="NO" /><label for="q6g-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.h -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.h. Have you been discharged from the Armed Forces under
+            <span class="bold">dishonorable</span> conditions?
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6h-yes" name="q6h_dishonorable" value="YES" /><label
+                  for="q6h-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6h-no" name="q6h_dishonorable" value="NO" /><label
+                  for="q6h-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.i -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.i.
+            <span class="blurb-trigger"
+              >Are you subject to a court order restraining you from harassing, stalking, or
+              threatening your child or an intimate partner or child of such partner?<span
+                class="blurb-content"
+                >Under 18 U.S.C § 922 firearms may not be sold to or received by person subject to a
+                court order that: (a) was issued after a hearing which the person received actual
+                notice of and had an opportunity to participate in; (b) restrains such person from
+                harassing, stalking, or threatening an intimate partner or child of such intimate
+                partner or person, or engaging in other conduct that would place an intimate partner
+                in reasonable fear of bodily injury to the partner or child; and (c)(i) includes a
+                finding that such person represents a credible threat the physical safety of such
+                intimate partner or child, or (ii) by its terms, explicitly prohibits the use,
+                attempted use, or threatended use of physical force against such intimate partner or
+                child that would reasonably be expected to cause bodily injury. An “intimate
+                partner” of a person is the spouse or former spouse of the person, the parent of a
+                child of the person or an individual who cohabitates or has cohabitated with the
+                person.</span
+              ></span
+            >
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6i-yes" name="q6i_restraining" value="YES" /><label
+                  for="q6i-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6i-no" name="q6i_restraining" value="NO" /><label
+                  for="q6i-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.j -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.j.
+            <span class="blurb-trigger"
+              >Have you ever been convicted in any court of a misdemeanor crime of domestic
+              violence?<span class="blurb-content"
+                >A Federal, State, local, tribal offense that is a misdemeanor under the Federal,
+                State, or tribal law and has, as an element, the use or attempted use of physical
+                force, or the threatened use of a deadly weapon, committed by a current or former
+                spouse, parent, or guardian of the victim, by a person with whom the victim shares a
+                child in common, by a person cohabitating with, or has cohabited with the victim as
+                a spouse, parent, or guardian, or by a person similarly situated to a spouse,
+                parent, or guardian of the victim, or by a person who has a current or recent former
+                dating relationship with the victim (as defined in 18 U.S.C. § 921(a)(37)). The term
+                includes all misdemeanors that have as an element the use or attempted use of
+                physical force, or the threatened use of a deadly weapon (e.g., assault and
+                battery), if the offense is committed by one of the defined parties. (See Exception
+                in the definition of “Prohibited Person”). A person who has been convicted of a
+                misdemeanor crime of domestic violence also is not prohibited unless: (1) the person
+                was represented by a lawyer or gave up the right to a lawyer; or (2) if the person
+                was entitled to a jury, was tried by a jury, or gave up the right to a jury trial.
+                Persons subject to this exception should mark “no” in the applicable box.</span
+              ></span
+            >
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6j-yes" name="q6j_domestic" value="YES" /><label
+                  for="q6j-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6j-no" name="q6j_domestic" value="NO" /><label for="q6j-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.k -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.k. Have you ever renounced your United States citizenship?
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6k-yes" name="q6k_renounced" value="YES" /><label
+                  for="q6k-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6k-no" name="q6k_renounced" value="NO" /><label
+                  for="q6k-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.l -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.l. Are you an alien illegally or unlawfully in the United States?
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6l-yes" name="q6l_illegal" value="YES" /><label
+                  for="q6l-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6l-no" name="q6l_illegal" value="NO" /><label for="q6l-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.m.1 -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.m.1. Are you an alien who has been admitted to the United States under a nonimmigrant
+            visa?
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6m1-yes" name="q6m1_nonimmigrant" value="YES" /><label
+                  for="q6m1-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6m1-no" name="q6m1_nonimmigrant" value="NO" /><label
+                  for="q6m1-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr />
+
+        <!-- 6.m.2 -->
+        <div class="sub-question-container">
+          <legend class="sub-question-legend">
+            6.m.2.
+            <span class="blurb-trigger"
+              >If you answered yes to Item 6.m.1., do you fall into any of the exceptions stated in
+              the instructions?<span class="blurb-content"
+                >An alien admitted to the United States under a nonimmigrant visa includes, among
+                others, persons visiting the United States temporarily for business or pleasure,
+                persons studying in the United States who maintain a residence abroad, and certain
+                temporary foreign workers. These aliens must answer “yes” to this question and
+                provide the additional documentation required. Permanent resident aliens and aliens
+                legally admitted to the United States pursuant to either the Visa Waiver Program, or
+                to regulations otherwise exempting them from visa requirements, may answer “no” to
+                this question, and are not required to submit the additional documentation. An alien
+                admitted to the United States under a nonimmigrant visa is not prohibited from
+                purchasing, receiving or possessing a firearm if the alien: (1) is in possession of
+                a hunting license or permit lawfully issued by the Federal Government a State, or
+                local government, or an Indian tribe federally recognized by the Bureau of Indian
+                Affairs, which is valid and unexpired; (2) was admitted to the United States for
+                lawful hunting or sporting purposes; (3) is an official representative of a foreign
+                government who is accredited to the United States Government, or the Government’s
+                mission to an international organization having its headquarters in the United
+                States; (4) is an official representative of a foreign government who is en route to
+                or from another country, to which that alien is accredited; (5) is an official of a
+                foreign government or a distinguished foreign visitor who has been so designated by
+                the Department of State; (6) is a foreign law enforcement officer of a friendly
+                foreign government entering the United States on official law enforcement business;
+                (7) has received a waiver from the prohibition from the Attorney General of the
+                United States.</span
+              ></span
+            >
+            (If so, attach the appropriate exception documentation to this questionnaire)
+          </legend>
+          <div class="sub-question-controls">
+            <div class="radio-group">
+              <div>
+                <input type="radio" id="q6m2-na" name="q6m2_exception" value="N/A" /><label
+                  for="q6m2-na"
+                  >N/A</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6m2-yes" name="q6m2_exception" value="YES" /><label
+                  for="q6m2-yes"
+                  >YES</label
+                >
+              </div>
+              <div>
+                <input type="radio" id="q6m2-no" name="q6m2_exception" value="NO" /><label
+                  for="q6m2-no"
+                  >NO</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Question 7 -->
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span
+            >7. If you are an alien, record your U.S.-Issued Alien or Admission Number (AR, USCIS,
+            or I-94 number):</span
+          >
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <input type="text" id="q7_alienNumber" name="q7_alienNumber" />
+      </fieldset>
+
+      <!-- Question 8 -->
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span
+            >8.
+            <span class="blurb-trigger"
+              >Have you been issued a Unique Personal Identification Number (UPIN)?<span
+                class="blurb-content"
+                >The SSN and UPIN are not required. However, this information assists with the
+                efficient completion of the National Instant Criminal Background Check System (NICS)
+                background check. Please be aware that refusal to provide this information may
+                result in a delay in the NICS background check process.</span
+              ></span
+            ></span
+          >
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <div class="radio-group">
+          <div>
+            <input type="radio" id="q8_upin-yes" name="q8_hasUpin" value="YES" /><label
+              for="q8_upin-yes"
+              >YES</label
+            >
+          </div>
+          <div>
+            <input type="radio" id="q8_upin-no" name="q8_hasUpin" value="NO" /><label
+              for="q8_upin-no"
+              >NO</label
+            >
+          </div>
+        </div>
+        <div class="sub-input">
+          <label for="q8_upinNumber">If yes, please list</label>
+          <input type="text" id="q8_upinNumber" name="q8_upinNumber" disabled />
+        </div>
+      </fieldset>
+
+      <!-- Question 9 -->
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>9.a. Country of Citizenship</span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <div class="checkbox-group">
+          <div>
+            <input type="checkbox" id="q9a_usa" name="q9a_citizenship" value="USA" /><label
+              for="q9a_usa"
+              >UNITED STATES OF AMERICA</label
+            >
+          </div>
+          <div>
+            <input type="checkbox" id="q9a_other" name="q9a_citizenship" value="OTHER" />
+            <label for="q9a_other">OTHER COUNTRY/COUNTRIES (SPECIFY)</label>
+          </div>
+          <div class="sub-input">
+            <input type="text" id="q9a_other_text" name="q9a_citizenship_other" disabled />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>9.b. State of Birth</span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <select id="q9b_birthState" name="q9b_birthState">
+          <option value="">SELECT A STATE...</option>
+          <option value="ALABAMA">ALABAMA</option>
+          <option value="ALASKA">ALASKA</option>
+          <option value="AMERICAN SAMOA">AMERICAN SAMOA</option>
+          <option value="ARIZONA">ARIZONA</option>
+          <option value="ARKANSAS">ARKANSAS</option>
+          <option value="ARMED FORCES AMERICA">ARMED FORCES AMERICA</option>
+          <option value="ARMED FORCES EUROPE">ARMED FORCES EUROPE</option>
+          <option value="ARMED FORCES PACIFIC">ARMED FORCES PACIFIC</option>
+          <option value="CALIFORNIA">CALIFORNIA</option>
+          <option value="COLORADO">COLORADO</option>
+          <option value="CONNECTICUT">CONNECTICUT</option>
+          <option value="DELAWARE">DELAWARE</option>
+          <option value="DISTRICT OF COLUMBIA">DISTRICT OF COLUMBIA</option>
+          <option value="FED STATE MICRONESIA">FED STATE MICRONESIA</option>
+          <option value="FLORIDA">FLORIDA</option>
+          <option value="GEORGIA">GEORGIA</option>
+          <option value="GUAM">GUAM</option>
+          <option value="HAWAII">HAWAII</option>
+          <option value="IDAHO">IDAHO</option>
+          <option value="ILLINOIS">ILLINOIS</option>
+          <option value="INDIANA">INDIANA</option>
+          <option value="IOWA">IOWA</option>
+          <option value="KANSAS">KANSAS</option>
+          <option value="KENTUCKY">KENTUCKY</option>
+          <option value="LOUISIANA">LOUISIANA</option>
+          <option value="MAINE">MAINE</option>
+          <option value="MARSHALL ISLANDS">MARSHALL ISLANDS</option>
+          <option value="MARYLAND">MARYLAND</option>
+          <option value="MASSACHUSETTS">MASSACHUSETTS</option>
+          <option value="MICHIGAN">MICHIGAN</option>
+          <option value="MINNESOTA">MINNESOTA</option>
+          <option value="MISSISSIPPI">MISSISSIPPI</option>
+          <option value="MISSOURI">MISSOURI</option>
+          <option value="MONTANA">MONTANA</option>
+          <option value="NEBRASKA">NEBRASKA</option>
+          <option value="NEVADA">NEVADA</option>
+          <option value="NEW HAMPSHIRE">NEW HAMPSHIRE</option>
+          <option value="NEW JERSEY">NEW JERSEY</option>
+          <option value="NEW MEXICO">NEW MEXICO</option>
+          <option value="NEW YORK">NEW YORK</option>
+          <option value="NORTH CAROLINA">NORTH CAROLINA</option>
+          <option value="NORTH DAKOTA">NORTH DAKOTA</option>
+          <option value="OHIO">OHIO</option>
+          <option value="OKLAHOMA">OKLAHOMA</option>
+          <option value="OREGON">OREGON</option>
+          <option value="PALAU">PALAU</option>
+          <option value="PENNSYLVANIA">PENNSYLVANIA</option>
+          <option value="PUERTO RICO">PUERTO RICO</option>
+          <option value="RHODE ISLAND">RHODE ISLAND</option>
+          <option value="ROTA, SAIPAN, TINIAN">ROTA, SAIPAN, TINIAN</option>
+          <option value="SOUTH CAROLINA">SOUTH CAROLINA</option>
+          <option value="SOUTH DAKOTA">SOUTH DAKOTA</option>
+          <option value="TENNESSEE">TENNESSEE</option>
+          <option value="TEXAS">TEXAS</option>
+          <option value="UTAH">UTAH</option>
+          <option value="VERMONT">VERMONT</option>
+          <option value="VIRGIN ISLANDS">VIRGIN ISLANDS</option>
+          <option value="VIRGINIA">VIRGINIA</option>
+          <option value="WASHINGTON">WASHINGTON</option>
+          <option value="WEST VIRGINIA">WEST VIRGINIA</option>
+          <option value="WISCONSIN">WISCONSIN</option>
+          <option value="WYOMING">WYOMING</option>
+        </select>
+      </fieldset>
+
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>9.c. Country of Birth</span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <div class="radio-group">
+          <div>
+            <input type="radio" id="q9c_usa" name="q9c_birthCountry" value="USA" /><label
+              for="q9c_usa"
+              >UNITED STATES OF AMERICA</label
+            >
+          </div>
+          <div>
+            <input type="radio" id="q9c_other" name="q9c_birthCountry" value="OTHER" />
+            <label for="q9c_other">OTHER COUNTRY</label>
+          </div>
+          <div class="sub-input">
+            <input type="text" id="q9c_other_text" name="q9c_birthCountry_other" disabled />
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Certification Date -->
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>Certification Date</span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <input type="date" id="certificationDate" name="certificationDate" />
+      </fieldset>
+
+      <div class="generate-container">
+        <button type="button" id="generate-pdf" class="form-button">GENERATE 5320.23</button>
+        <p class="privacy-note">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            fill="currentColor"
+            viewBox="0 0 16 16"
+          >
+            <path
+              d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"
+            />
+          </svg>
+          Your information is processed locally in your browser and is never sent to any server.
+        </p>
+      </div>
+    </form>
+
+    <!-- Load prefill configuration first, then form JavaScript -->
+    <script src="prefill-config.js"></script>
+    <script src="./static/form.js"></script>
+  </body>
+</html>

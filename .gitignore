@@ -1,0 +1,8 @@
+.aider*
+/node_modules
+*.pdf
+/.direnv
+/.claude
+/dist
+/result
+!/static/*.pdf
