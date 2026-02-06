@@ -617,9 +617,9 @@ function renderPagesToBuffer(
     if (signatureImage && pageIndex === signaturePageIndex && signatureRect) {
       try {
         // Signature image is 1200x400 (3:1 aspect ratio).
-        // Fixed height of 25pt, compute width from 3:1 aspect ratio.
+        // Fixed height of 33pt, compute width from 3:1 aspect ratio.
         const sigImageAspect = 1200 / 400; // 3:1
-        const sigHeight = 25;
+        const sigHeight = 33;
         const sigWidth = sigHeight * sigImageAspect;
         const sigX = signatureRect[0];
         const sigY = signatureRect[1];
