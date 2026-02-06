@@ -778,21 +778,31 @@ async function preparePdfDocument(
     console.error("Error deleting pages:", error);
   }
 
-  // Load photo image
+  // Load photo image — convert to JPEG first since mupdf can't handle all formats (e.g. WebP)
   const photoDataUrl = window.getPhotoData ? window.getPhotoData() : null;
   let photoImage: mupdf.Image | null = null;
 
-  console.log("[PDF] Photo data URL present:", !!photoDataUrl);
   if (photoDataUrl) {
     try {
-      const base64Data = photoDataUrl.split(",")[1];
-      const binaryString = atob(base64Data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      photoImage = new mupdf.Image(bytes);
-      console.log("[PDF] Photo image created, bytes:", bytes.length);
+      // Convert data URL to Blob
+      const photoResponse = await fetch(photoDataUrl);
+      const photoBlob = await photoResponse.blob();
+
+      // Use createImageBitmap (works with any format, not subject to CSP img-src)
+      const bitmap = await createImageBitmap(photoBlob);
+
+      // Draw onto OffscreenCanvas and export as JPEG
+      const photoCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const photoCtx = photoCanvas.getContext("2d")!;
+      photoCtx.fillStyle = "#FFFFFF";
+      photoCtx.fillRect(0, 0, bitmap.width, bitmap.height);
+      photoCtx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+
+      const jpegBlob = await photoCanvas.convertToBlob({ type: "image/jpeg", quality: 0.92 });
+      const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+
+      photoImage = new mupdf.Image(jpegBytes);
     } catch (error) {
       console.error("Error loading photo:", error);
     }
