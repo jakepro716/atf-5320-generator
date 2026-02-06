@@ -260,35 +260,73 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   };
 
-  const saveStateToHash = () => {
+  const STORAGE_KEY = "atf5320_form_data";
+  const REMEMBER_KEY = "atf5320_remember";
+
+  // Get the active storage backend
+  const getStorage = () => {
+    return localStorage.getItem(REMEMBER_KEY) === "true"
+      ? localStorage
+      : sessionStorage;
+  };
+
+  const saveStateToStorage = () => {
     const data = serializeForm();
+    const storage = getStorage();
     if (Object.keys(data).length > 0) {
-      const jsonString = JSON.stringify(data);
-      const base64String = btoa(jsonString)
-        .replace(/\+/g, "-") // Convert '+' to '-'
-        .replace(/\//g, "_") // Convert '/' to '_'
-        .replace(/=+$/, ""); // Remove trailing '='
-      history.replaceState(null, "", "#" + base64String);
+      storage.setItem(STORAGE_KEY, JSON.stringify(data));
     } else {
-      history.replaceState(null, "", window.location.pathname + window.location.search);
+      storage.removeItem(STORAGE_KEY);
     }
   };
 
-  const loadStateFromHash = () => {
-    if (window.location.hash) {
+  const loadStateFromStorage = () => {
+    // Check for legacy URL hash data — migrate if present
+    if (window.location.hash && window.location.hash.length > 1) {
       try {
         let base64String = window.location.hash
           .substring(1)
-          .replace(/-/g, "+") // Convert '-' back to '+'
-          .replace(/_/g, "/"); // Convert '_' back to '/'
-
+          .replace(/-/g, "+")
+          .replace(/_/g, "/");
         const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
         const jsonString = atob(base64String + padding);
-
         const data = JSON.parse(jsonString);
+
+        // Check if storage already has data (conflict)
+        const existingLocal = localStorage.getItem(STORAGE_KEY);
+        const existingSession = sessionStorage.getItem(STORAGE_KEY);
+
+        if (existingLocal || existingSession) {
+          const useLink = confirm(
+            "Found saved data on this device AND in the link URL.\n\n" +
+            "OK = Use the data from the link (overwrites local data)\n" +
+            "Cancel = Keep local data (ignore the link)"
+          );
+          if (!useLink) {
+            history.replaceState(null, "", window.location.pathname + window.location.search);
+            const stored = (existingLocal || existingSession);
+            deserializeForm(JSON.parse(stored));
+            return;
+          }
+        }
+
         deserializeForm(data);
+        getStorage().setItem(STORAGE_KEY, JSON.stringify(data));
+        history.replaceState(null, "", window.location.pathname + window.location.search);
+        console.log("Migrated form data from URL hash to browser storage");
+        return;
       } catch (e) {
         console.error("Failed to load state from hash:", e);
+      }
+    }
+
+    // Load from localStorage first (if remember me), then sessionStorage
+    const stored = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        deserializeForm(JSON.parse(stored));
+      } catch (e) {
+        console.error("Failed to load state from storage:", e);
       }
     }
   };
@@ -369,8 +407,8 @@ document.addEventListener("DOMContentLoaded", () => {
     normalizeToUppercase(e.target);
   });
 
-  form.addEventListener("input", debounce(saveStateToHash, 150));
-  form.addEventListener("change", saveStateToHash);
+  form.addEventListener("input", debounce(saveStateToStorage, 150));
+  form.addEventListener("change", saveStateToStorage);
 
   // --- DYNAMIC FIELD LOGIC & FORMATTING ---
 
@@ -678,7 +716,9 @@ document.addEventListener("DOMContentLoaded", () => {
       lockRelatedOtherFields();
       // After reset, re-run all UI update functions to correctly set disabled states etc.
       runAllUIUpdates();
-      saveStateToHash(); // This will clear the hash
+      sessionStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEY);
+      // Don't remove REMEMBER_KEY — that's a preference, not user data
     }
   });
 
@@ -988,7 +1028,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  loadStateFromHash();
+  // --- REMEMBER ME INITIALIZATION (must run before loadStateFromStorage) ---
+  const rememberCheckbox = document.getElementById("remember-me");
+  if (rememberCheckbox) {
+    // Sync checkbox UI to persisted preference BEFORE loading form data
+    rememberCheckbox.checked = localStorage.getItem(REMEMBER_KEY) === "true";
+
+    rememberCheckbox.addEventListener("change", () => {
+      if (rememberCheckbox.checked) {
+        localStorage.setItem(REMEMBER_KEY, "true");
+        // Migrate current sessionStorage data to localStorage
+        const data = sessionStorage.getItem(STORAGE_KEY);
+        if (data) {
+          localStorage.setItem(STORAGE_KEY, data);
+          sessionStorage.removeItem(STORAGE_KEY);
+        }
+      } else {
+        localStorage.removeItem(REMEMBER_KEY);
+        // Migrate localStorage data to sessionStorage
+        const data = localStorage.getItem(STORAGE_KEY);
+        if (data) {
+          sessionStorage.setItem(STORAGE_KEY, data);
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+    });
+  }
+
+  // --- INITIALIZATION ORDER (critical) ---
+  loadStateFromStorage();
   applyPrefillConfig(); // Apply prefills to empty fields
   applyReadonlyLocks(); // Lock readonly fields
   lockRelatedOtherFields(); // Lock related "other" text inputs

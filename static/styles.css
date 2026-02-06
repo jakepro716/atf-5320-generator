@@ -612,3 +612,17 @@ textarea:disabled {
     margin-left: 0;
   }
 }
+
+.remember-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.remember-toggle label {
+  font-weight: normal;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+  text-transform: none;
+  cursor: pointer;
+}
