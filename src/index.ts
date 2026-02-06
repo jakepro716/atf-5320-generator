@@ -622,7 +622,8 @@ function renderPagesToBuffer(
         const sigHeight = 33;
         const sigWidth = sigHeight * sigImageAspect;
         const sigX = signatureRect[0];
-        const sigY = signatureRect[1];
+        // Align the canvas baseline (65% of image) with the PDF signature line
+        const sigY = signatureRect[3] - 0.65 * sigHeight;
         const matrix: mupdf.Matrix = [sigWidth, 0, 0, sigHeight, sigX, sigY];
         device.fillImage(signatureImage, matrix, 1.0);
         console.log("[PDF] Drew signature on page", pageIndex, "rect:", [sigX, sigY, sigWidth, sigHeight]);

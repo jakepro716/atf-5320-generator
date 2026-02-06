@@ -887,7 +887,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     _drawBaseline() {
       const ctx = this.renderCtx;
-      const y = this.renderCanvas.height * 0.7;
+      const y = this.renderCanvas.height * 0.65;
       ctx.save();
       ctx.strokeStyle = "#bbb";
       ctx.lineWidth = 1;
