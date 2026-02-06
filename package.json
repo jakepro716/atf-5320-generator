@@ -20,6 +20,7 @@
   "repository": "github:schlarpc/atf-5320.23-generator",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
+    "autopen": "^1.0.0",
     "jszip": "^3.10.1",
     "mupdf": "1.26.4"
   },

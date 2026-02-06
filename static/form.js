@@ -92,11 +92,26 @@ document.addEventListener("DOMContentLoaded", () => {
           break;
       }
     }
+
+    // Include signature data if available
+    if (signatureManager) {
+      const strokes = signatureManager.getStrokes();
+      if (strokes) {
+        data.signature = strokes;
+      }
+    }
+
     return data;
   };
 
   const deserializeForm = (data) => {
+    // Restore signature data if present
+    if (data.signature && signatureManager) {
+      signatureManager.setStrokes(data.signature);
+    }
+
     for (const key in data) {
+      if (key === "signature") continue;
       const elements = form.elements[key];
       if (!elements) continue;
 
@@ -710,6 +725,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("clear-form").addEventListener("click", () => {
     if (confirm("Are you sure you want to clear all fields? This cannot be undone.")) {
       form.reset();
+      // Clear signature
+      if (signatureManager) signatureManager.clear();
       // Reapply prefill configuration to restore locked fields
       applyPrefillConfig();
       applyReadonlyLocks();
@@ -727,6 +744,12 @@ document.addEventListener("DOMContentLoaded", () => {
     button.addEventListener("click", (e) => {
       const fieldset = e.target.closest(".question-group");
       if (fieldset) {
+        // Special case: if this fieldset contains the signature canvas, clear signature
+        if (fieldset.querySelector("#signature-canvas") && signatureManager) {
+          signatureManager.clear();
+          return;
+        }
+
         const elements = fieldset.querySelectorAll("input, textarea, select");
         elements.forEach((el) => {
           // Skip prefill-locked fields
@@ -776,7 +799,214 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // Include signature strokes for PDF generation
+    if (signatureManager) {
+      const strokes = signatureManager.getStrokes();
+      if (strokes) {
+        data.signature = strokes;
+      }
+    }
+
     return data;
+  };
+
+  // --- SIGNATURE PAD ---
+  class SignatureManager {
+    constructor(inputCanvas, renderCanvas) {
+      this.inputCanvas = inputCanvas;
+      this.renderCanvas = renderCanvas;
+      this.inputCtx = inputCanvas.getContext("2d");
+      this.renderCtx = renderCanvas.getContext("2d");
+      this.strokes = [];
+      this.currentStroke = null;
+      this.isDrawing = false;
+
+      this._bindEvents();
+    }
+
+    _getPointerPosition(e) {
+      const rect = this.inputCanvas.getBoundingClientRect();
+      const scaleX = this.inputCanvas.width / rect.width;
+      const scaleY = this.inputCanvas.height / rect.height;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY,
+      };
+    }
+
+    _bindEvents() {
+      const canvas = this.inputCanvas;
+
+      // Pointer events for unified mouse/touch handling
+      canvas.addEventListener("pointerdown", (e) => {
+        if (e.button && e.button !== 0) return;
+        e.preventDefault();
+        canvas.setPointerCapture(e.pointerId);
+        this.isDrawing = true;
+        const pos = this._getPointerPosition(e);
+        this.currentStroke = [pos];
+        this._drawCurrentStroke();
+      });
+
+      canvas.addEventListener("pointermove", (e) => {
+        if (!this.isDrawing) return;
+        e.preventDefault();
+        const pos = this._getPointerPosition(e);
+        this.currentStroke.push(pos);
+        this._drawCurrentStroke();
+      });
+
+      const endStroke = (e) => {
+        if (!this.isDrawing) return;
+        e.preventDefault();
+        this.isDrawing = false;
+        if (this.currentStroke && this.currentStroke.length > 0) {
+          this.strokes.push(this.currentStroke);
+        }
+        this.currentStroke = null;
+        this._clearInputCanvas();
+        this._renderAllStrokes();
+        this._dispatchChange();
+      };
+
+      canvas.addEventListener("pointerup", endStroke);
+      canvas.addEventListener("pointercancel", endStroke);
+    }
+
+    _clearInputCanvas() {
+      this.inputCtx.clearRect(0, 0, this.inputCanvas.width, this.inputCanvas.height);
+    }
+
+    _clearRenderCanvas() {
+      this.renderCtx.clearRect(0, 0, this.renderCanvas.width, this.renderCanvas.height);
+    }
+
+    _catmullRomPoint(p0, p1, p2, p3, t) {
+      const t2 = t * t;
+      const t3 = t2 * t;
+      return {
+        x: 0.5 * (2 * p1.x + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+        y: 0.5 * (2 * p1.y + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
+      };
+    }
+
+    _drawSplineStroke(ctx, points) {
+      if (points.length === 0) return;
+
+      ctx.beginPath();
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      if (points.length === 1) {
+        // Single point — draw a dot
+        ctx.arc(points[0].x, points[0].y, 1, 0, Math.PI * 2);
+        ctx.fill();
+        return;
+      }
+
+      if (points.length === 2) {
+        ctx.moveTo(points[0].x, points[0].y);
+        ctx.lineTo(points[1].x, points[1].y);
+        ctx.stroke();
+        return;
+      }
+
+      // Catmull-Rom spline through all points
+      ctx.moveTo(points[0].x, points[0].y);
+
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[Math.max(i - 1, 0)];
+        const p1 = points[i];
+        const p2 = points[Math.min(i + 1, points.length - 1)];
+        const p3 = points[Math.min(i + 2, points.length - 1)];
+
+        const steps = 10;
+        for (let s = 1; s <= steps; s++) {
+          const t = s / steps;
+          const pt = this._catmullRomPoint(p0, p1, p2, p3, t);
+          ctx.lineTo(pt.x, pt.y);
+        }
+      }
+
+      ctx.stroke();
+    }
+
+    _drawCurrentStroke() {
+      this._clearInputCanvas();
+      if (this.currentStroke) {
+        this._drawSplineStroke(this.inputCtx, this.currentStroke);
+      }
+    }
+
+    _renderAllStrokes() {
+      this._clearRenderCanvas();
+      for (const stroke of this.strokes) {
+        this._drawSplineStroke(this.renderCtx, stroke);
+      }
+    }
+
+    _dispatchChange() {
+      this.inputCanvas.dispatchEvent(new CustomEvent("signaturechange", { bubbles: true }));
+    }
+
+    undo() {
+      if (this.strokes.length > 0) {
+        this.strokes.pop();
+        this._renderAllStrokes();
+        this._dispatchChange();
+      }
+    }
+
+    clear() {
+      this.strokes = [];
+      this.currentStroke = null;
+      this.isDrawing = false;
+      this._clearInputCanvas();
+      this._clearRenderCanvas();
+      this._dispatchChange();
+    }
+
+    getStrokes() {
+      return this.strokes.length > 0 ? this.strokes : null;
+    }
+
+    setStrokes(strokes) {
+      this.strokes = strokes || [];
+      this._renderAllStrokes();
+    }
+  }
+
+  // Initialize signature pad
+  const signatureInputCanvas = document.getElementById("signature-canvas");
+  const signatureRenderCanvas = document.getElementById("signature-render-canvas");
+  let signatureManager = null;
+
+  if (signatureInputCanvas && signatureRenderCanvas) {
+    signatureManager = new SignatureManager(signatureInputCanvas, signatureRenderCanvas);
+
+    // Undo button
+    document.getElementById("signature-undo").addEventListener("click", () => {
+      signatureManager.undo();
+    });
+
+    // Clear button
+    document.getElementById("signature-clear").addEventListener("click", () => {
+      signatureManager.clear();
+    });
+
+    // Save on signature change
+    signatureInputCanvas.addEventListener("signaturechange", () => {
+      saveStateToStorage();
+    });
+  }
+
+  // Expose signature strokes getter for TypeScript
+  window.getSignatureStrokes = () => {
+    return signatureManager ? signatureManager.getStrokes() : null;
   };
 
   // --- PHOTO HANDLING ---

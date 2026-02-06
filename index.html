@@ -1248,6 +1248,26 @@ SHORT BARRELED RIFLE,Daniel Defense,&quot;101 Warfighter Way, Black Creek, GA 31
         </div>
       </fieldset>
 
+      <!-- Signature -->
+      <fieldset class="question-group">
+        <legend class="question-header">
+          <span>Signature of Responsible Person</span>
+          <button type="button" class="clear-question-group" title="Clear this section">
+            &times;
+          </button>
+        </legend>
+        <div class="signature-wrapper">
+          <div class="signature-pad-container">
+            <canvas id="signature-render-canvas" width="600" height="200" class="signature-render-canvas"></canvas>
+            <canvas id="signature-canvas" width="600" height="200" class="signature-canvas"></canvas>
+          </div>
+          <div class="signature-controls">
+            <button type="button" id="signature-undo" class="signature-button">Undo</button>
+            <button type="button" id="signature-clear" class="signature-button">Clear</button>
+          </div>
+        </div>
+      </fieldset>
+
       <!-- Certification Date -->
       <fieldset class="question-group">
         <legend class="question-header">

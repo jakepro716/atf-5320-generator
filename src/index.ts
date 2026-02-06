@@ -1,5 +1,6 @@
 import * as mupdf from "mupdf";
 import JSZip from "jszip";
+import { Signature, Format } from "autopen";
 
 // Special symbol to represent selected checkboxes/radio buttons
 const SELECTED = Symbol("SELECTED");
@@ -37,6 +38,7 @@ declare global {
     getParsedItems: () => ItemData[];
     setParsedItems: (items: ItemData[]) => void;
     getPhotoData: () => string | null;
+    getSignatureStrokes: () => Array<Array<{ x: number; y: number }>> | null;
     photoData: string | null;
   }
 }
@@ -109,6 +111,9 @@ export interface NFAFormData {
 
   // Certification
   certificationDate?: string;
+
+  // Signature
+  signature?: Array<Array<{ x: number; y: number }>>;
 }
 
 // Function to get form data from HTML form
@@ -158,8 +163,8 @@ function sanitizeFilenameComponent(str: string): string {
     .substring(0, 50); // Limit length per component
 }
 
-// Helper function to generate dynamic PDF filename
-function generateFilename(formData: NFAFormData): string {
+// Helper function to generate base filename (without extension)
+function generateBaseFilename(formData: NFAFormData): string {
   const components: string[] = ["5320.23"];
 
   // Add responsible person name
@@ -183,7 +188,7 @@ function generateFilename(formData: NFAFormData): string {
     : new Date().toISOString().split("T")[0];
   components.push(dateStr);
 
-  return components.join("_") + ".pdf";
+  return components.join("_");
 }
 
 // Function to map form data to PDF widget format
@@ -512,253 +517,313 @@ function getCleoWidgetVariant(name: string): string {
     .replace("#field[24]", "#field[22]");
 }
 
+// Helper to render signature strokes to a JPEG image via autopen + OffscreenCanvas
+async function renderSignatureImage(
+  strokes: Array<Array<{ x: number; y: number }>>
+): Promise<mupdf.Image | null> {
+  try {
+    const sig = new Signature({ canvasWidth: 600, canvasHeight: 200 });
+    for (const stroke of strokes) {
+      sig.pushStroke(stroke);
+    }
+
+    if (sig.isEmpty()) return null;
+
+    // Render to SVG
+    const svgString = sig.render(Format.SVG, {
+      width: 1200,
+      height: 400,
+      strokeWidth: 3,
+      strokeColor: "#000000",
+      spline: true,
+      backgroundColor: null,
+      contentFit: false,
+    });
+
+    // Rasterize SVG to JPEG using OffscreenCanvas
+    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const svgUrl = URL.createObjectURL(svgBlob);
+
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = reject;
+      img.src = svgUrl;
+    });
+
+    const canvas = new OffscreenCanvas(1200, 400);
+    const ctx = canvas.getContext("2d")!;
+
+    // Fill white background (JPEG has no transparency)
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, 1200, 400);
+
+    // Draw SVG image
+    ctx.drawImage(img, 0, 0, 1200, 400);
+
+    URL.revokeObjectURL(svgUrl);
+
+    // Convert to JPEG
+    const jpegBlob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.92 });
+    const jpegBuffer = new Uint8Array(await jpegBlob.arrayBuffer());
+
+    return new mupdf.Image(jpegBuffer);
+  } catch (error) {
+    console.error("Error rendering signature image:", error);
+    return null;
+  }
+}
+
+// Helper to render specific pages from a doc into a PDF buffer
+function renderPagesToBuffer(
+  doc: mupdf.PDFDocument,
+  pageIndices: number[],
+  photoImage: mupdf.Image | null,
+  signatureImage: mupdf.Image | null,
+  photoPageIndex: number,
+  signaturePageIndex: number
+): Uint8Array {
+  const outputBuffer = new mupdf.Buffer();
+  const writer = new mupdf.DocumentWriter(outputBuffer, "pdf", "");
+
+  for (const pageIndex of pageIndices) {
+    const page = doc.loadPage(pageIndex);
+    const bounds = page.getBounds();
+    const device = writer.beginPage(bounds);
+
+    // Render the filled form page
+    page.run(device, mupdf.Matrix.identity);
+
+    // Draw photo on the first page of each copy
+    if (photoImage && pageIndex === photoPageIndex) {
+      try {
+        const photoWidth = 144; // 2 inches at 72 DPI
+        const photoHeight = 144;
+        const photoX = 460;
+        const photoY = 300;
+        const matrix: mupdf.Matrix = [photoWidth, 0, 0, photoHeight, photoX, photoY];
+        device.fillImage(photoImage, matrix, 1.0);
+      } catch (error) {
+        console.error("Error drawing photo:", error);
+      }
+    }
+
+    // Draw signature on the second page of each copy
+    if (signatureImage && pageIndex === signaturePageIndex) {
+      try {
+        const sigWidth = 100;
+        const sigHeight = 19;
+        const sigX = 36;
+        const sigY = 695;
+        const matrix: mupdf.Matrix = [sigWidth, 0, 0, sigHeight, sigX, sigY];
+        device.fillImage(signatureImage, matrix, 1.0);
+      } catch (error) {
+        console.error("Error drawing signature:", error);
+      }
+    }
+
+    writer.endPage();
+  }
+
+  writer.close();
+  return outputBuffer.asUint8Array().slice();
+}
+
+// Helper to trigger a file download
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// Shared logic: load PDF, fill fields, delete instruction pages, prepare images
+async function preparePdfDocument(
+  fieldsToFill: Map<string, string | typeof SELECTED>
+): Promise<{
+  doc: mupdf.PDFDocument;
+  photoImage: mupdf.Image | null;
+  signatureImage: mupdf.Image | null;
+}> {
+  const response = await fetch(
+    "./static/f_5320.23_national_firearms_act_nfa_responsible_person_questionnaire.pdf"
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to load PDF: ${response.statusText}`);
+  }
+
+  const pdfBytes = await response.arrayBuffer();
+
+  const doc = mupdf.Document.openDocument(
+    new Uint8Array(pdfBytes),
+    "application/pdf"
+  ) as mupdf.PDFDocument;
+
+  if (!doc.isPDF()) {
+    throw new Error("Downloaded file is not a valid PDF");
+  }
+
+  // Collect widgets and remove signature fields
+  const widgets = new Map<string, mupdf.PDFWidget>();
+  const pageCount = doc.countPages();
+  const signatureWidgetsToRemove: Array<{ page: mupdf.PDFPage; widget: mupdf.PDFWidget }> = [];
+
+  for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+    const page = doc.loadPage(pageIndex) as mupdf.PDFPage;
+    const pageWidgets = page.getWidgets();
+
+    for (const widget of pageWidgets) {
+      const fieldName = widget.getName() || "";
+      const fieldType = widget.getFieldType();
+
+      const isSignatureField =
+        fieldType.toLowerCase().includes("signature") ||
+        fieldType.toLowerCase().includes("sig") ||
+        fieldName.toLowerCase().includes("signature") ||
+        fieldName.toLowerCase().includes("_sig");
+
+      if (isSignatureField) {
+        signatureWidgetsToRemove.push({ page, widget });
+      } else if (fieldName) {
+        widgets.set(fieldName, widget);
+      }
+    }
+  }
+
+  for (const { page, widget } of signatureWidgetsToRemove) {
+    try {
+      page.deleteAnnotation(widget);
+    } catch (error) {
+      console.warn("Could not remove signature widget:", error);
+    }
+  }
+
+  // Apply alignment changes
+  const alignmentChanges: Array<[string, [number, number, number, number]]> = [
+    ["topmostSubform[0].Page2[0].no17[0]", [2.5, 0, 2.5, 0]],
+    ["topmostSubform[0].Page2[0].usacheckbox[0]", [1.5, 0, 1.5, 0]],
+    ["topmostSubform[0].Page1[0].nhl[0]", [1, 0, 1, 0]],
+    ["topmostSubform[0].Page1[0].w[0]", [1, 0, 1, 0]],
+    ["topmostSubform[0].Page1[0].#field[24]", [0, -0.5, 0, 0.5]],
+  ];
+
+  for (const [widgetName, rectDeltas] of alignmentChanges) {
+    for (const widgetNameVariant of [widgetName, getCleoWidgetVariant(widgetName)]) {
+      const widget = widgets.get(widgetNameVariant);
+      if (widget) {
+        const currentRect = widget.getRect();
+        const newRect: mupdf.Rect = [
+          currentRect[0] + rectDeltas[0],
+          currentRect[1] + rectDeltas[1],
+          currentRect[2] + rectDeltas[2],
+          currentRect[3] + rectDeltas[3],
+        ];
+        widget.setRect(newRect);
+        widget.update();
+      }
+    }
+  }
+
+  // Fill form fields
+  for (const [widgetName, answer] of fieldsToFill) {
+    for (const widgetNameVariant of [widgetName, getCleoWidgetVariant(widgetName)]) {
+      const widget = widgets.get(widgetNameVariant);
+      if (widget) {
+        try {
+          if (answer === SELECTED) {
+            if (widget.isCheckbox() || widget.isRadioButton()) {
+              widget.toggle();
+            }
+          } else {
+            const stringValue = answer as string;
+            if (widget.isText()) {
+              widget.setTextValue(stringValue);
+            } else if (widget.isChoice()) {
+              widget.setChoiceValue(stringValue);
+            } else {
+              try {
+                widget.setTextValue(stringValue);
+              } catch {
+                // Ignore errors for unknown widget types
+              }
+            }
+          }
+          widget.update();
+        } catch (error) {
+          console.error(`Error filling widget ${widgetNameVariant}:`, error);
+        }
+      }
+    }
+  }
+
+  // Delete instruction pages (pages 2-3) in reverse order
+  try {
+    doc.deletePage(3);
+    doc.deletePage(2);
+  } catch (error) {
+    console.error("Error deleting pages:", error);
+  }
+
+  // Load photo image
+  const photoDataUrl = window.getPhotoData ? window.getPhotoData() : null;
+  let photoImage: mupdf.Image | null = null;
+
+  if (photoDataUrl) {
+    try {
+      const base64Data = photoDataUrl.split(",")[1];
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      photoImage = new mupdf.Image(bytes);
+    } catch (error) {
+      console.error("Error loading photo:", error);
+    }
+  }
+
+  // Load signature image
+  const signatureStrokes = window.getSignatureStrokes ? window.getSignatureStrokes() : null;
+  let signatureImage: mupdf.Image | null = null;
+
+  if (signatureStrokes && signatureStrokes.length > 0) {
+    signatureImage = await renderSignatureImage(signatureStrokes);
+  }
+
+  return { doc, photoImage, signatureImage };
+}
+
 // Main PDF generation function
 async function generatePDF(): Promise<void> {
   try {
     console.log("Extracting form data...");
     const formData = getFormData();
-    console.log("Form data:", formData);
-
     const fieldsToFill = mapFormDataToPdfFields(formData);
-    console.log("PDF fields to fill:", fieldsToFill);
 
-    console.log("Loading PDF form from static file...");
-    const response = await fetch(
-      "./static/f_5320.23_national_firearms_act_nfa_responsible_person_questionnaire.pdf"
-    );
+    console.log("Loading and filling PDF...");
+    const { doc, photoImage, signatureImage } = await preparePdfDocument(fieldsToFill);
 
-    if (!response.ok) {
-      throw new Error(`Failed to load PDF: ${response.statusText}`);
-    }
+    // After page deletion, 4 remaining pages:
+    // Pages 0-1 = ATF/RP copy, Pages 2-3 = CLEO copy
+    const baseFilename = generateBaseFilename(formData);
 
-    const pdfBytes = await response.arrayBuffer();
+    const atfBuffer = renderPagesToBuffer(doc, [0, 1], photoImage, signatureImage, 0, 1);
+    const cleoBuffer = renderPagesToBuffer(doc, [2, 3], photoImage, signatureImage, 2, 3);
 
-    console.log("Loading PDF document...");
-    const doc = mupdf.Document.openDocument(
-      new Uint8Array(pdfBytes),
-      "application/pdf"
-    ) as mupdf.PDFDocument;
-
-    if (!doc.isPDF()) {
-      throw new Error("Downloaded file is not a valid PDF");
-    }
-
-    console.log("Collecting form widgets...");
-    const widgets = new Map<string, mupdf.PDFWidget>();
-    const pageCount = doc.countPages();
-    const signatureWidgetsToRemove: Array<{ page: mupdf.PDFPage; widget: mupdf.PDFWidget }> = [];
-
-    for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-      const page = doc.loadPage(pageIndex) as mupdf.PDFPage;
-      const pageWidgets = page.getWidgets();
-
-      for (const widget of pageWidgets) {
-        const fieldName = widget.getName() || "";
-        const fieldType = widget.getFieldType();
-
-        // Check if this is a signature field
-        const isSignatureField =
-          fieldType.toLowerCase().includes("signature") ||
-          fieldType.toLowerCase().includes("sig") ||
-          fieldName.toLowerCase().includes("signature") ||
-          fieldName.toLowerCase().includes("_sig");
-
-        if (isSignatureField) {
-          console.log(`Found signature field: ${fieldName} (${fieldType}) - will remove`);
-          signatureWidgetsToRemove.push({ page, widget });
-        } else if (fieldName) {
-          console.log("Found widget:", fieldName);
-          widgets.set(fieldName, widget);
-        }
-      }
-    }
-
-    // Remove signature widgets
-    if (signatureWidgetsToRemove.length > 0) {
-      console.log(`Removing ${signatureWidgetsToRemove.length} signature field(s)...`);
-      for (const { page, widget } of signatureWidgetsToRemove) {
-        try {
-          page.deleteAnnotation(widget);
-          console.log(`Removed signature widget`);
-        } catch (error) {
-          console.warn(`Could not remove signature widget:`, error);
-        }
-      }
-    }
-
-    console.log("Applying alignment changes...");
-    const alignmentChanges: Array<[string, [number, number, number, number]]> = [
-      ["topmostSubform[0].Page2[0].no17[0]", [2.5, 0, 2.5, 0]],
-      ["topmostSubform[0].Page2[0].usacheckbox[0]", [1.5, 0, 1.5, 0]],
-      ["topmostSubform[0].Page1[0].nhl[0]", [1, 0, 1, 0]],
-      ["topmostSubform[0].Page1[0].w[0]", [1, 0, 1, 0]],
-      ["topmostSubform[0].Page1[0].#field[24]", [0, -0.5, 0, 0.5]],
-    ];
-
-    for (const [widgetName, rectDeltas] of alignmentChanges) {
-      for (const widgetNameVariant of [widgetName, getCleoWidgetVariant(widgetName)]) {
-        const widget = widgets.get(widgetNameVariant);
-        if (widget) {
-          const currentRect = widget.getRect();
-          const newRect: mupdf.Rect = [
-            currentRect[0] + rectDeltas[0],
-            currentRect[1] + rectDeltas[1],
-            currentRect[2] + rectDeltas[2],
-            currentRect[3] + rectDeltas[3],
-          ];
-          widget.setRect(newRect);
-          widget.update();
-        }
-      }
-    }
-
-    console.log("Filling form fields...");
-    for (const [widgetName, answer] of fieldsToFill) {
-      for (const widgetNameVariant of [widgetName, getCleoWidgetVariant(widgetName)]) {
-        const widget = widgets.get(widgetNameVariant);
-        if (widget) {
-          console.log(`Filling widget: ${widgetNameVariant} (type: ${widget.getFieldType()})`);
-          try {
-            if (answer === SELECTED) {
-              // For checkboxes/radio buttons, we need to check them
-              if (widget.isCheckbox() || widget.isRadioButton()) {
-                const result = widget.toggle();
-                console.log(`Toggled ${widgetNameVariant}, result: ${result}`);
-              } else {
-                console.log(
-                  `Widget ${widgetNameVariant} is not a checkbox/radio button, skipping SELECTED`
-                );
-              }
-            } else {
-              // Try different methods to set the value based on widget type
-              const stringValue = answer as string;
-
-              if (widget.isText()) {
-                const result = widget.setTextValue(stringValue);
-                console.log(
-                  `Set text value for ${widgetNameVariant}: "${stringValue}", result: ${result}`
-                );
-              } else if (widget.isChoice()) {
-                const result = widget.setChoiceValue(stringValue);
-                console.log(
-                  `Set choice value for ${widgetNameVariant}: "${stringValue}", result: ${result}`
-                );
-              } else {
-                // Try text value as fallback for unknown types
-                try {
-                  const result = widget.setTextValue(stringValue);
-                  console.log(
-                    `Set text value (fallback) for ${widgetNameVariant}: "${stringValue}", result: ${result}`
-                  );
-                } catch (e) {
-                  console.log(
-                    `Failed to set value for ${widgetNameVariant}, widget type: ${widget.getFieldType()}`
-                  );
-                }
-              }
-            }
-
-            const updateResult = widget.update();
-            console.log(`Updated widget ${widgetNameVariant}, result: ${updateResult}`);
-          } catch (error) {
-            console.error(`Error filling widget ${widgetNameVariant}:`, error);
-          }
-        }
-      }
-    }
-
-    console.log(`Document has ${doc.countPages()} pages before deletion`);
-    console.log("Removing unnecessary pages...");
-    // Note: We need to remove in reverse order to maintain indices
-    try {
-      doc.deletePage(3);
-      console.log(`Deleted page 3, now has ${doc.countPages()} pages`);
-      doc.deletePage(2);
-      console.log(`Deleted page 2, now has ${doc.countPages()} pages`);
-    } catch (error) {
-      console.error("Error deleting pages:", error);
-    }
-
-    // Create a completely new PDF by re-rendering pages without form restrictions
-    console.log("Creating clean PDF by rendering pages...");
-
-    // Get photo data if available
-    const photoDataUrl = window.getPhotoData ? window.getPhotoData() : null;
-    let photoImage: mupdf.Image | null = null;
-
-    if (photoDataUrl) {
-      try {
-        console.log("Loading photo for PDF...");
-        // Convert base64 data URL to buffer
-        const base64Data = photoDataUrl.split(",")[1];
-        const binaryString = atob(base64Data);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        photoImage = new mupdf.Image(bytes);
-        console.log("Photo loaded successfully");
-      } catch (error) {
-        console.error("Error loading photo:", error);
-      }
-    }
-
-    const outputBuffer = new mupdf.Buffer();
-    const writer = new mupdf.DocumentWriter(outputBuffer, "pdf", "");
-
-    const finalPageCount = doc.countPages();
-    for (let pageIndex = 0; pageIndex < finalPageCount; pageIndex++) {
-      const page = doc.loadPage(pageIndex);
-      const bounds = page.getBounds();
-
-      // Begin a new page in the output document
-      const device = writer.beginPage(bounds);
-
-      // Run the page through the device (this renders the filled form)
-      page.run(device, mupdf.Matrix.identity);
-
-      // Draw photo only on page 1 (RP copy), not on CLEO copy
-      if (photoImage && pageIndex === 0) {
-        try {
-          // Photo position: upper right corner of the form
-          // ATF Form 5320.23 photo box is approximately 2"x2" (144x144 points)
-          const photoWidth = 144; // 2 inches at 72 DPI
-          const photoHeight = 144;
-          const photoX = 460; // Right side of the page
-          const photoY = 300; // Adjusted position
-
-          // Create transformation matrix: [scaleX, 0, 0, scaleY, translateX, translateY]
-          const matrix: mupdf.Matrix = [photoWidth, 0, 0, photoHeight, photoX, photoY];
-
-          device.fillImage(photoImage, matrix, 1.0);
-          console.log("Drew photo on page 1");
-        } catch (error) {
-          console.error("Error drawing photo:", error);
-        }
-      }
-
-      writer.endPage();
-    }
-
-    writer.close();
-
-    // Convert to blob and download
-    const blob = new Blob([outputBuffer.asUint8Array() as BlobPart], {
-      type: "application/pdf",
-    });
-    const url = URL.createObjectURL(blob);
-
-    // Create download link and trigger download
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = generateFilename(formData);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Clean up
-    URL.revokeObjectURL(url);
     doc.destroy();
+
+    // Package both PDFs into a ZIP
+    const zip = new JSZip();
+    zip.file(baseFilename + "_ATF.pdf", atfBuffer);
+    zip.file(baseFilename + "_CLEO.pdf", cleoBuffer);
+
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    downloadBlob(zipBlob, baseFilename + ".zip");
 
     console.log("PDF generated and download initiated successfully!");
   } catch (error) {
@@ -867,12 +932,11 @@ function validateItem(item: ItemData): ItemData {
   return item;
 }
 
-// Generate a single PDF buffer for an item (internal use)
-async function generatePDFBuffer(
+// Generate ATF + CLEO PDF buffers for an item (internal use)
+async function generatePDFBuffers(
   formData: NFAFormData,
-  item?: ItemData,
-  removeSignatureFields: boolean = true
-): Promise<{ buffer: Uint8Array; filename: string }> {
+  item?: ItemData
+): Promise<{ atfBuffer: Uint8Array; cleoBuffer: Uint8Array; baseFilename: string }> {
   // If item is provided, override Question 4 fields
   const effectiveFormData = { ...formData };
   if (item) {
@@ -887,194 +951,18 @@ async function generatePDFBuffer(
 
   const fieldsToFill = mapFormDataToPdfFields(effectiveFormData);
 
-  const response = await fetch(
-    "./static/f_5320.23_national_firearms_act_nfa_responsible_person_questionnaire.pdf"
-  );
+  const { doc, photoImage, signatureImage } = await preparePdfDocument(fieldsToFill);
 
-  if (!response.ok) {
-    throw new Error(`Failed to load PDF: ${response.statusText}`);
-  }
+  // After page deletion, 4 remaining pages:
+  // Pages 0-1 = ATF/RP copy, Pages 2-3 = CLEO copy
+  const atfBuffer = renderPagesToBuffer(doc, [0, 1], photoImage, signatureImage, 0, 1);
+  const cleoBuffer = renderPagesToBuffer(doc, [2, 3], photoImage, signatureImage, 2, 3);
 
-  const pdfBytes = await response.arrayBuffer();
-  const doc = mupdf.Document.openDocument(
-    new Uint8Array(pdfBytes),
-    "application/pdf"
-  ) as mupdf.PDFDocument;
-
-  if (!doc.isPDF()) {
-    throw new Error("Downloaded file is not a valid PDF");
-  }
-
-  // Collect widgets and optionally remove signature fields
-  const widgets = new Map<string, mupdf.PDFWidget>();
-  const pageCount = doc.countPages();
-  const signatureWidgetsToRemove: Array<{ page: mupdf.PDFPage; widget: mupdf.PDFWidget }> = [];
-
-  for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-    const page = doc.loadPage(pageIndex) as mupdf.PDFPage;
-    const pageWidgets = page.getWidgets();
-
-    for (const widget of pageWidgets) {
-      const fieldName = widget.getName() || "";
-      const fieldType = widget.getFieldType();
-
-      // Check if this is a signature field
-      const isSignatureField =
-        fieldType.toLowerCase().includes("signature") ||
-        fieldType.toLowerCase().includes("sig") ||
-        fieldName.toLowerCase().includes("signature") ||
-        fieldName.toLowerCase().includes("_sig");
-
-      if (isSignatureField && removeSignatureFields) {
-        console.log(`Found signature field: ${fieldName} (${fieldType}) - will remove`);
-        signatureWidgetsToRemove.push({ page, widget });
-      } else if (fieldName) {
-        widgets.set(fieldName, widget);
-      }
-    }
-  }
-
-  // Remove signature widgets
-  if (removeSignatureFields && signatureWidgetsToRemove.length > 0) {
-    console.log(`Removing ${signatureWidgetsToRemove.length} signature field(s)...`);
-    for (const { page, widget } of signatureWidgetsToRemove) {
-      try {
-        page.deleteAnnotation(widget);
-        console.log(`Removed signature widget`);
-      } catch (error) {
-        console.warn(`Could not remove signature widget:`, error);
-      }
-    }
-  }
-
-  // Apply alignment changes
-  const alignmentChanges: Array<[string, [number, number, number, number]]> = [
-    ["topmostSubform[0].Page2[0].no17[0]", [2.5, 0, 2.5, 0]],
-    ["topmostSubform[0].Page2[0].usacheckbox[0]", [1.5, 0, 1.5, 0]],
-    ["topmostSubform[0].Page1[0].nhl[0]", [1, 0, 1, 0]],
-    ["topmostSubform[0].Page1[0].w[0]", [1, 0, 1, 0]],
-    ["topmostSubform[0].Page1[0].#field[24]", [0, -0.5, 0, 0.5]],
-  ];
-
-  for (const [widgetName, rectDeltas] of alignmentChanges) {
-    for (const widgetNameVariant of [widgetName, getCleoWidgetVariant(widgetName)]) {
-      const widget = widgets.get(widgetNameVariant);
-      if (widget) {
-        const currentRect = widget.getRect();
-        const newRect: mupdf.Rect = [
-          currentRect[0] + rectDeltas[0],
-          currentRect[1] + rectDeltas[1],
-          currentRect[2] + rectDeltas[2],
-          currentRect[3] + rectDeltas[3],
-        ];
-        widget.setRect(newRect);
-        widget.update();
-      }
-    }
-  }
-
-  // Fill form fields
-  for (const [widgetName, answer] of fieldsToFill) {
-    for (const widgetNameVariant of [widgetName, getCleoWidgetVariant(widgetName)]) {
-      const widget = widgets.get(widgetNameVariant);
-      if (widget) {
-        try {
-          if (answer === SELECTED) {
-            if (widget.isCheckbox() || widget.isRadioButton()) {
-              widget.toggle();
-            }
-          } else {
-            const stringValue = answer as string;
-            if (widget.isText()) {
-              widget.setTextValue(stringValue);
-            } else if (widget.isChoice()) {
-              widget.setChoiceValue(stringValue);
-            } else {
-              try {
-                widget.setTextValue(stringValue);
-              } catch {
-                // Ignore errors for unknown widget types
-              }
-            }
-          }
-          widget.update();
-        } catch (error) {
-          console.error(`Error filling widget ${widgetNameVariant}:`, error);
-        }
-      }
-    }
-  }
-
-  // Remove unnecessary pages
-  try {
-    doc.deletePage(3);
-    doc.deletePage(2);
-  } catch (error) {
-    console.error("Error deleting pages:", error);
-  }
-
-  // Create a completely new PDF by re-rendering pages without form restrictions
-  console.log("Creating clean PDF by rendering pages...");
-
-  // Get photo data if available
-  const photoDataUrl = window.getPhotoData ? window.getPhotoData() : null;
-  let photoImage: mupdf.Image | null = null;
-
-  if (photoDataUrl) {
-    try {
-      const base64Data = photoDataUrl.split(",")[1];
-      const binaryString = atob(base64Data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      photoImage = new mupdf.Image(bytes);
-    } catch (error) {
-      console.error("Error loading photo:", error);
-    }
-  }
-
-  const outputBuffer = new mupdf.Buffer();
-  const writer = new mupdf.DocumentWriter(outputBuffer, "pdf", "");
-
-  const finalPageCount = doc.countPages();
-  for (let pageIndex = 0; pageIndex < finalPageCount; pageIndex++) {
-    const page = doc.loadPage(pageIndex);
-    const bounds = page.getBounds();
-
-    // Begin a new page in the output document
-    const device = writer.beginPage(bounds);
-
-    // Run the page through the device (this renders the filled form)
-    page.run(device, mupdf.Matrix.identity);
-
-    // Draw photo only on page 1 (RP copy)
-    if (photoImage && pageIndex === 0) {
-      try {
-        const photoWidth = 144;
-        const photoHeight = 144;
-        const photoX = 460;
-        const photoY = 300;
-
-        const matrix: mupdf.Matrix = [photoWidth, 0, 0, photoHeight, photoX, photoY];
-
-        device.fillImage(photoImage, matrix, 1.0);
-      } catch (error) {
-        console.error("Error drawing photo:", error);
-      }
-    }
-
-    writer.endPage();
-  }
-
-  writer.close();
-
-  const buffer = outputBuffer.asUint8Array().slice();
-  const filename = generateFilename(effectiveFormData);
+  const baseFilename = generateBaseFilename(effectiveFormData);
 
   doc.destroy();
 
-  return { buffer, filename };
+  return { atfBuffer, cleoBuffer, baseFilename };
 }
 
 // Batch PDF generation function
@@ -1090,15 +978,15 @@ async function generateBatchPDF(items: ItemData[]): Promise<void> {
     const formData = getFormData();
     const zip = new JSZip();
 
-    // Track progress
     let completed = 0;
     const total = validItems.length;
 
     for (const item of validItems) {
       console.log(`Processing item ${completed + 1}/${total}: ${item.model} - ${item.serial}`);
 
-      const { buffer, filename } = await generatePDFBuffer(formData, item);
-      zip.file(filename, buffer);
+      const { atfBuffer, cleoBuffer, baseFilename } = await generatePDFBuffers(formData, item);
+      zip.file(baseFilename + "_ATF.pdf", atfBuffer);
+      zip.file(baseFilename + "_CLEO.pdf", cleoBuffer);
 
       completed++;
     }
@@ -1107,17 +995,9 @@ async function generateBatchPDF(items: ItemData[]): Promise<void> {
     const zipBlob = await zip.generateAsync({ type: "blob" });
 
     // Generate ZIP filename
-    const zipFilename = generateZipFilename(formData);
+    const zipFilename = generateBatchZipFilename(formData);
 
-    // Download ZIP
-    const url = URL.createObjectURL(zipBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = zipFilename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadBlob(zipBlob, zipFilename);
 
     console.log(`Batch PDF generation complete! Downloaded ${zipFilename}`);
   } catch (error) {
@@ -1126,8 +1006,8 @@ async function generateBatchPDF(items: ItemData[]): Promise<void> {
   }
 }
 
-// Generate ZIP filename
-function generateZipFilename(formData: NFAFormData): string {
+// Generate batch ZIP filename
+function generateBatchZipFilename(formData: NFAFormData): string {
   const components: string[] = ["5320.23-forms"];
 
   if (formData.q3a_fullName) {
