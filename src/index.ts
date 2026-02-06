@@ -620,13 +620,19 @@ function renderPagesToBuffer(
     // Draw signature on the second page of each copy using captured widget rect
     if (signatureImage && pageIndex === signaturePageIndex && signatureRect) {
       try {
+        // Signature image is 1200x400 (3:1 aspect ratio).
+        // The widget rect is a thin line field — use its width but compute
+        // height from the image aspect ratio to avoid distortion.
+        const sigImageAspect = 1200 / 400; // 3:1
+        const rectWidth = signatureRect[2] - signatureRect[0];
+        const sigWidth = rectWidth;
+        const sigHeight = sigWidth / sigImageAspect;
+        // Bottom-align: signature sits on the widget's bottom edge (the line)
         const sigX = signatureRect[0];
-        const sigY = signatureRect[1];
-        const sigWidth = signatureRect[2] - signatureRect[0];
-        const sigHeight = signatureRect[3] - signatureRect[1];
+        const sigY = signatureRect[3] - sigHeight;
         const matrix: mupdf.Matrix = [sigWidth, 0, 0, sigHeight, sigX, sigY];
         device.fillImage(signatureImage, matrix, 1.0);
-        console.log("[PDF] Drew signature on page", pageIndex, "at rect:", signatureRect);
+        console.log("[PDF] Drew signature on page", pageIndex, "rect:", [sigX, sigY, sigWidth, sigHeight]);
       } catch (error) {
         console.error("Error drawing signature:", error);
       }
